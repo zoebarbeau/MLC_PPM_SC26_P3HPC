@@ -15,10 +15,10 @@
 #include <ExaMPM_BoundaryConditions.hpp>
 #include <ExaMPM_Mesh.hpp>
 #include <ExaMPM_ProblemManager2.hpp>
-#include <ExaMPM_DriverGrid.hpp>
 #include <Cabana_Core.hpp>
 #include <Kokkos_Core.hpp>
-
+#include <ExaMPM_LocalCorrection.hpp>
+#include <ExaMPM_DriverGrid.hpp>
 #include <memory>
 #include <string>
 
@@ -31,7 +31,7 @@ class SolverBase
 {
   public:
     virtual ~SolverBase() = default;
-    virtual void solve( const double t_final, const int write_freq ) = 0;
+    virtual void solve( const double t_final, const int write_freq, const double center, const int c, const double cell_size ) = 0;
 };
 
 //---------------------------------------------------------------------------//
@@ -39,13 +39,14 @@ template <class MemorySpace, class ExecutionSpace>
 class Solver : public SolverBase
 {
   public:
+    using ListType = Cabana::LinkedCellList<MemorySpace,double>;	  
     template <class InitFunc>
     Solver( MPI_Comm comm, const Kokkos::Array<double, 6>& global_bounding_box,
             const std::array<int, 3>& global_num_cell,
             const std::array<bool, 3>& periodic,
             const Cabana::Grid::BlockPartitioner<3>& partitioner,
             const int halo_cell_width, const InitFunc& create_functor,
-            const int particles_per_cell, const double vorticity,
+            const int particles_per_cell, const double cell_size,
             const BoundaryCondition& bc )
         : _dt( 0.001 )
         , _time( 0.0 )
@@ -61,19 +62,29 @@ class Solver : public SolverBase
         _bc.max = _mesh->maxDomainGlobalNodeIndex();
 
         _pm = std::make_shared<ProblemManager<MemorySpace>>(
-            ExecutionSpace(), _mesh, create_functor, particles_per_cell,vorticity);
+            ExecutionSpace(), _mesh, create_functor, particles_per_cell,cell_size);
+	double grid_min[3] = { -0.75,
+                               -0.75,
+                               -0.75 };
+        double grid_max[3] = { 0.75,
+                               0.75,
+                               0.75 };
+
+        double grid_delta[3] = {cell_size, cell_size, cell_size};
+
+	auto positions = _pm->get( Location::Particle(), Field::Position() );
+        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,2*cell_size, 0.5);
 
         MPI_Comm_rank( comm, &_rank );
     }
 
-    void solve( const double t_final, const int write_freq ) override
+    void solve( const double t_final, const int write_freq, const double center, const int c, const double cell_size )
     {
         // Output initial state.
         outputParticles();
-	DriverGrid::interpVort( ExecutionSpace(), *_pm, _bc );
-
+	LocalCorrection::Interpolation(ExecutionSpace(), *_pm, c, center, cell_size );
+ 	LocalCorrection::Correction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size );
 	_step += 1;
-        _pm->communicateParticles( _halo_min );
 	outputParticles();
     }
 
@@ -114,6 +125,7 @@ class Solver : public SolverBase
     int _halo_min;
     std::shared_ptr<Mesh<MemorySpace>> _mesh;
     std::shared_ptr<ProblemManager<MemorySpace>> _pm;
+    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _neigh_list;
     int _rank;
 };
 
