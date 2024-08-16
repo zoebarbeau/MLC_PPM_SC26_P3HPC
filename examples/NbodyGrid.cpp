@@ -1,6 +1,7 @@
 #include <Cabana_Core.hpp>
 #include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
+#include <ExaMPM_GreensFunction.hpp>
 #include <mpi.h>
 #include <memory.h>
 
@@ -68,10 +69,10 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
 
     // Node Layouts
     auto node_scalar_layout = Cabana::Grid::createArrayLayout(
-          global_grid, 1, 0, Cabana::Grid::Node() );
+          global_grid, 0, 1, Cabana::Grid::Node() );
 
     auto node_vector_layout = Cabana::Grid::createArrayLayout(
-          global_grid, 3, 0, Cabana::Grid::Node() );
+          global_grid, 0, 3,Cabana::Grid::Node() );
 
     // Arrays
     auto vel_array = Cabana::Grid::createArray<double, MemorySpace>(
@@ -165,26 +166,33 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
 
       // Neighbor List
       using ListType = Cabana::LinkedCellList<MemorySpace,double>;
-      ListType neigh_list(positions,0,num_p+num_grid,grid_delta,grid_min,grid_max,cell_size, 1);
+      ListType neigh_list(positions,0,num_p+num_grid,grid_delta,grid_min,grid_max,2*cell_size, 0.5);
 
+
+      std::cout << "make neighbor list " << std::endl;
       //Iterate to Find Neighbors 
-      double xq[3], u[3], K[3];
       auto  Nbody_corr = KOKKOS_LAMBDA(const int p, const int  q){
 
         
 	  if( ids(q) == 100 && ids(p) == 1){
 
+   		  
+ 	   double x[3] = { positions( p, 0 ), positions( p, 1 ), positions( p, 2 ) };
+           double xq[3] = { positions( q, 0 ), positions( q, 1 ), positions( q, 2 ) };
+           double u[3] = { velocity( p, 0 ), velocity( p, 1 ), velocity( p, 2 ) };
+           double K[3];
+
+               //Evaluate Green's Function
+	   ExaMPM::GreensFunction::CalculateK(x,xq,u, K);
+
             for(int d = 0; d < 3; d++){
-              velcorr_g(index(p,0),index(p,1), index(p,2),d) += velocity(q,d); //K[d];
-	      std::cout << "velocity q = " << velocity(q,d) << std::endl;
-	      std::cout << " Velcorrection = " << velcorr_g(index(p,0), index(p,1), index(p,2),d) << std::endl;
-	      std::cout << "i = " << index(p,0) << " j = " << index(p,1) << " k = " << index(p,2) << std::endl;
+              velcorr_g(index(p,0),index(p,1), index(p,2),d) += K[d];
             }
 
 	  }
      };
 
-          Cabana::neighbor_parallel_for(Kokkos::RangePolicy<ExecutionSpace>( ExecutionSpace(), 0,num_p+num_grid), Nbody_corr, neigh_list, Cabana::FirstNeighborsTag(), Cabana::SerialOpTag(), "LocalCorrections" );
+          Cabana::neighbor_parallel_for(Kokkos::RangePolicy<ExecutionSpace>( ExecutionSpace(), 0, num_grid), Nbody_corr, neigh_list, Cabana::FirstNeighborsTag(), Cabana::SerialOpTag(), "LocalCorrections" );
 
 	  
      int iterate = 0;
@@ -195,6 +203,7 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
                      int num_n =
                         Cabana::NeighborList<ListType>::numNeighbor( neigh_list, iterate );
                      std::cout << "num neighbors = " << num_n << std::endl;
+	//	     std::cout << "velcorr_0 = " << vel[iterate][0] << "velcorr_1 = " << vel[iterate][1] << "velcorr_2 " << vel[iterate][2] << std::endl;
                      std::cout << "velcorr_g1 = " << velcorr_g(i,j,k,0) << " velcorr_g2 = " << velcorr_g(i,j,k,1) << " velcorr_g3 = " << velcorr_g(i,j,k,2) << std::endl;
                      std::cout << "i = " << i << " j = " << j << " k = " << k << std::endl;
                 }

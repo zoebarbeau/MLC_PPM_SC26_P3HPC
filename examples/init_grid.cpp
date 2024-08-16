@@ -28,16 +28,18 @@ struct ParticleInitFunc
     KOKKOS_INLINE_FUNCTION bool operator()( const double x[3],
                                             ParticleType& p ) const
     {   
-	double r,s,theta;
+	double r,s,theta, q;
         double pi = 2*acos(0.0);
         double magn,vortx, vorty, vortz;
 	r = pow( pow(x[0], 2.0) + pow(x[1],2.0),  0.5);
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
+        q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
-        if ( (r <= 0.65) && (r >= 0.35) )
-        {  
+       if ( (q <= 0.5) ) //0.65) ) //&& (r >= 0.35) )
+       {  
 
-            if( (s < 0.15+_h) && (s > 0.15 - _h) ){		
+	//Stuff for a Vortex Ring	
+  //          if( (s < 0.15+_h) && (s > 0.15 - _h) ){		
 	    
 /*	      if( x[0] == 0 && x[1] > 0 ){
                   theta = pi/2;
@@ -53,37 +55,39 @@ struct ParticleInitFunc
 */	           
               // Vorticity
               vortz = 0;
-	      vortx = -r*x[1]; vorty = r*x[0];
-	      magn = pow( pow(vortx, 2.0) + pow(vorty, 2.0), 0.5);
-	      vortx = vortx/magn; vorty = vorty/magn;
+	      vortx = x[1]+0.5*_h; 
+	      vorty = -(x[0]+0.5*_h); 
 	      Cabana::get<0>( p, 0 ) = vortx;
               Cabana::get<0>( p, 1 ) = vorty;
 	      Cabana::get<0>( p, 2) = 0.0;
 
               // Velocity
-              for ( int d = 0; d < 3; ++d )
+              for ( int d = 0; d < 3; ++d ){
                 Cabana::get<1>( p, d ) = 0.0;
-
+		Cabana::get<4>( p, d ) = 0.0;
+		Cabana::get<5>( p, d ) = 0.0;
+              }
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d];
-	     
+                 Cabana::get<2>( p, d ) = x[d] + 0.5*_h;
+     
 	      Cabana::get<3>(p) = 1.0;
 	      return true;
-	    } 
-        }
+//	    } 
+      }
 
         return false;
     }
 };
 
 //---------------------------------------------------------------------------//
-void initgrid( const double cell_size, const int ppc, const int halo_size,
+void initgrid(const double cell_size, const int ppc, const int halo_size,
                const std::string& exec_space, const double vorticity )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
-    Kokkos::Array<double, 6> global_box = { -0.75, -0.75, -0.75, 0.75, 0.75, 0.75 };
-
+    Kokkos::Array<double, 6> global_box = {-0.75, -0.75, -0.75, 0.75, 0.75, 0.75}; // { -0.75, -0.75, -0.75, 0.75, 0.75, 0.75 };
+    double center = 0.75;
+    int c      = 4;
     // Compute the number of cells in each direction. The user input must
     // squarely divide the domain.
     std::array<int, 3> global_num_cell = {
@@ -99,7 +103,7 @@ void initgrid( const double cell_size, const int ppc, const int halo_size,
     // little movement in Y.
     int comm_size;
     MPI_Comm_size( MPI_COMM_WORLD, &comm_size );
-    std::array<int, 3> ranks_per_dim = { 1, comm_size, 1 };
+    std::array<int, 3> ranks_per_dim = { 1, 1, 1 };
     Cabana::Grid::ManualBlockPartitioner<3> partitioner( ranks_per_dim );
 
 
@@ -116,8 +120,8 @@ void initgrid( const double cell_size, const int ppc, const int halo_size,
     // Solve the problem.
     auto solver = ExaMPM::createSolver(
         exec_space, MPI_COMM_WORLD, global_box, global_num_cell, periodic,
-        partitioner, halo_size, ParticleInitFunc( cell_size,vorticity ),vorticity, ppc, bc );
-    solver->solve( t_final, write_freq );
+        partitioner, halo_size, ParticleInitFunc( cell_size, vorticity ),ppc,cell_size, bc );
+    solver->solve( t_final, write_freq,center,c,cell_size );
 }
 
 //---------------------------------------------------------------------------//
@@ -157,16 +161,6 @@ int main( int argc, char* argv[] )
 
     // number of halo cells.
     int halo_size = std::atoi( argv[3] );
-
-    // time step size.
-//    double delta_t = std::atof( argv[4] );
-
-    // end time.
-//    double t_final = std::atof( argv[5] );
-
-    // write frequency
-//    int write_freq = std::atoi( argv[6] );
-
     // execution space
     std::string exec_space( argv[4] );
 
