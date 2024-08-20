@@ -167,6 +167,11 @@ void initializeParticles( const ExecSpace& exec_space,
                                   ( high_coords[Dim::K] - low_coords[Dim::K] ) /
                                       particles_per_cell_dim };
 
+/*	    std::cout << i_own << " " << j_own << " " << k_own << " " << std::endl;
+	    std::cout << "low node " << i << " " << j << " " << k << std::endl;
+	    std::cout << " high coords " << high_coords[0] << " " << high_coords[1] << " " << high_coords[2] << std::endl;
+	    std::cout << " low coords " << low_coords[0] << " " << low_coords[1] << " " << low_coords[2] << std::endl;
+	    std::cout << "spacing" << spacing[0] << " " << spacing[1] << " " << spacing[2] << std::endl; */
             // Particle coordinate.
             double px[3];
 

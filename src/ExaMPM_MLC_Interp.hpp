@@ -93,9 +93,9 @@ KOKKOS_INLINE_FUNCTION
 {
 
     result = 0.0;
-    int ig = round( (xp[0]+g.center) / g.cell_size ); 
-    int jg = round( (xp[1]+g.center) / g.cell_size );
-    int kg = round( (xp[2]+g.center) / g.cell_size );
+    int ig = floor( (xp[0]+g.center) / g.cell_size ); 
+    int jg = floor( (xp[1]+g.center) / g.cell_size );
+    int kg = floor( (xp[2]+g.center) / g.cell_size );
     result += view( ig, jg, kg, 0 ) ;
 }
 
@@ -115,9 +115,9 @@ KOKKOS_INLINE_FUNCTION
     for( int d = 0; d < 2; d++)	
        result[d] = 0.0;
 
-    int ig = round( (xp[0]+g.center) / g.cell_size );
-    int jg = round( (xp[1]+g.center) / g.cell_size );
-    int kg = round( (xp[2]+g.center) / g.cell_size );
+    int ig = floor( (xp[0]+g.center) / g.cell_size );
+    int jg = floor( (xp[1]+g.center) / g.cell_size );
+    int kg = floor( (xp[2]+g.center) / g.cell_size );
 
      
     for ( int d = 0; d < 2; d++ )
@@ -141,10 +141,9 @@ KOKKOS_INLINE_FUNCTION
     for( int d = 0; d < 3; d++)
        result[d] = 0.0;
 
-    int ig = round( (xp[0]+g.center) / g.cell_size );
-    int jg = round( (xp[1]+g.center) / g.cell_size );
-    int kg = round( (xp[2]+g.center) / g.cell_size );
-
+    int ig = floor( (xp[0]+g.center) / g.cell_size );
+    int jg = floor( (xp[1]+g.center) / g.cell_size );
+    int kg = floor( (xp[2]+g.center) / g.cell_size );
     for ( int d = 0; d < 3; d++ )
             result[d] += view( ig, jg, kg, d );
 }

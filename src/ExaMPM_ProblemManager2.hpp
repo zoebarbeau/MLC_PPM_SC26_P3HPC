@@ -74,11 +74,6 @@ class ProblemManager
     using particle_list = Cabana::AoSoA<particle_members, MemorySpace>;
     using particle_type = typename particle_list::tuple_type;
 
-    using particle_grid_members =
-        Cabana::MemberTypes<double[3], double[3], double[3],double,double[3], double[3],int[3], int>;
-    using particle_grid_list = Cabana::AoSoA<particle_grid_members, MemorySpace>;
-    using particle_grid_type = typename particle_grid_list::tuple_type;
-
     using node_array =
         Cabana::Grid::Array<double, Cabana::Grid::Node,
                             Cabana::Grid::UniformMesh<double>, MemorySpace>;
@@ -230,7 +225,6 @@ class ProblemManager
     std::shared_ptr<mesh_type> _mesh;
     double _amp, _cell_size;
     particle_list _particles;
-    particle_grid_list _grid_particles;
     std::shared_ptr<node_array> _vorticity;
     std::shared_ptr<node_array> _velocity;
     std::shared_ptr<node_array> _velocity_correction;

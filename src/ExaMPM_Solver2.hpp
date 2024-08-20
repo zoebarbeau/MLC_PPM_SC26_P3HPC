@@ -19,6 +19,7 @@
 #include <Kokkos_Core.hpp>
 #include <ExaMPM_LocalCorrection.hpp>
 #include <ExaMPM_DriverGrid.hpp>
+#include <ExaMPM_GridManager.hpp>
 #include <memory>
 #include <string>
 
@@ -58,6 +59,7 @@ class Solver : public SolverBase
             global_bounding_box, global_num_cell, periodic, partitioner,
             halo_cell_width, _halo_min, comm );
 
+	
         _bc.min = _mesh->minDomainGlobalNodeIndex();
         _bc.max = _mesh->maxDomainGlobalNodeIndex();
 
@@ -73,19 +75,35 @@ class Solver : public SolverBase
         double grid_delta[3] = {cell_size, cell_size, cell_size};
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
+
         _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,2*cell_size, 0.5);
+        _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max); //,cell_size, 1.0);
+
+	num_D0 = (global_num_cell[0] + 1 - 2)*(global_num_cell[1] + 1 - 2)*(global_num_cell[2] + 1 - 2);
+        num_D  = (global_num_cell[0]+1)*(global_num_cell[1]+1)*(global_num_cell[2]+1);
+        extent = global_num_cell[0];
+
+	 _gridp = std::make_shared<GridManager<MemorySpace>>(
+            ExecutionSpace(),num_D0, extent);
 
         MPI_Comm_rank( comm, &_rank );
     }
 
     void solve( const double t_final, const int write_freq, const double center, const int c, const double cell_size )
-    {
+    {   
+
+
+     	    
         // Output initial state.
-        outputParticles();
-	LocalCorrection::Interpolation(ExecutionSpace(), *_pm, c, center, cell_size );
- 	LocalCorrection::Correction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size );
-	_step += 1;
-	outputParticles();
+       outputParticles();
+       LocalCorrection::Interactions(ExecutionSpace(), *_pm, *_neigh_list,*_oneGrid_list,*_gridp,num_D0,
+		                     extent,center,cell_size);
+
+       std::cout << "interpolation " << std::endl;
+       LocalCorrection::Correction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size );
+       std::cout << " Nbody " << std::endl;
+       _step += 1;
+       outputParticles();
     }
 
 
@@ -125,8 +143,13 @@ class Solver : public SolverBase
     int _halo_min;
     std::shared_ptr<Mesh<MemorySpace>> _mesh;
     std::shared_ptr<ProblemManager<MemorySpace>> _pm;
+    std::shared_ptr<GridManager<MemorySpace>> _gridp;
     std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _neigh_list;
+    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _oneGrid_list;
     int _rank;
+    int num_D0;
+    int num_D;
+    int extent;
 };
 
 //---------------------------------------------------------------------------//
