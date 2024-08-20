@@ -35,7 +35,7 @@ struct ParticleInitFunc
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
         q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
-       if ( (q <= 0.5) ) //0.65) ) //&& (r >= 0.35) )
+       if ( (q <= 0.70) ) //0.65) ) //&& (r >= 0.35) )
        {  
 
 	//Stuff for a Vortex Ring	
@@ -69,7 +69,7 @@ struct ParticleInitFunc
               }
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d] + 0.5*_h;
+                 Cabana::get<2>( p, d ) = x[d]; // + 0.125; //0.5*_h;
      
 	      Cabana::get<3>(p) = 1.0;
 	      return true;
