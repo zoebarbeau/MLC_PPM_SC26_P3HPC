@@ -48,7 +48,7 @@ class Solver : public SolverBase
             const Cabana::Grid::BlockPartitioner<3>& partitioner,
             const int halo_cell_width, const InitFunc& create_functor,
             const int particles_per_cell, const double cell_size,
-            const BoundaryCondition& bc )
+            const double center, BoundaryCondition& bc )
         : _dt( 0.001 )
         , _time( 0.0 )
         , _step( 0 )
@@ -75,18 +75,33 @@ class Solver : public SolverBase
         double grid_delta[3] = {cell_size, cell_size, cell_size};
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
-
+        
+	//Real Particle Lists
+	//5x5x5 linked cell stencil
         _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,2*cell_size, 0.5);
-        _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max); //,cell_size, 1.0);
 
+	//1x1x1 linked cell stencil
+        _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
+
+	//Define the number of points contained in D0 and D
 	num_D0 = (global_num_cell[0] + 1 - 2)*(global_num_cell[1] + 1 - 2)*(global_num_cell[2] + 1 - 2);
         num_D  = (global_num_cell[0]+1)*(global_num_cell[1]+1)*(global_num_cell[2]+1);
+
+	//Width of the domain
         extent = global_num_cell[0];
 
-	 _gridp = std::make_shared<GridManager<MemorySpace>>(
-            ExecutionSpace(),num_D0, extent);
+	//Fake Grid Particle Lists
+	_gridp = std::make_shared<GridManager<MemorySpace>>(
+            ExecutionSpace(),positions,_pm->numParticle(),num_D0, extent,cell_size,center);
+	auto gridpositions = _gridp->get( Grid::Position() );
+	
+        // 5x5x5 grid particle list	
+ 	_Ci_grid_list =	std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, num_D0+_pm->numParticle(),grid_delta,grid_min,grid_max,2*cell_size, 0.5);
 
-        MPI_Comm_rank( comm, &_rank );
+	//1x1x1 grid particle list
+	_Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, num_D0+_pm->numParticle(),grid_delta,grid_min,grid_max,cell_size, 1.0);
+        
+	MPI_Comm_rank( comm, &_rank );
     }
 
     void solve( const double t_final, const int write_freq, const double center, const int c, const double cell_size )
@@ -96,11 +111,14 @@ class Solver : public SolverBase
      	    
         // Output initial state.
        outputParticles();
-       LocalCorrection::Interactions(ExecutionSpace(), *_pm, *_neigh_list,*_oneGrid_list,*_gridp,num_D0,
+       std::cout << " correction " << std::endl;
+       LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
 		                     extent,center,cell_size);
 
        std::cout << "interpolation " << std::endl;
-       LocalCorrection::Correction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size );
+
+       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size ); 
+
        std::cout << " Nbody " << std::endl;
        _step += 1;
        outputParticles();
@@ -144,8 +162,8 @@ class Solver : public SolverBase
     std::shared_ptr<Mesh<MemorySpace>> _mesh;
     std::shared_ptr<ProblemManager<MemorySpace>> _pm;
     std::shared_ptr<GridManager<MemorySpace>> _gridp;
-    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _neigh_list;
-    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _oneGrid_list;
+    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _neigh_list, _Ci_grid_list;
+    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _oneGrid_list, _Pi_grid_list;
     int _rank;
     int num_D0;
     int num_D;
@@ -162,8 +180,8 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
               const std::array<bool, 3>& periodic,
               const Cabana::Grid::BlockPartitioner<3>& partitioner,
               const int halo_cell_width, const InitFunc& create_functor,
-              const int particles_per_cell, const double vorticity,
-              const BoundaryCondition& bc )
+              const int particles_per_cell, const double cell_size, const double center,
+	      BoundaryCondition& bc)
 {
     if ( 0 == exec_space.compare( "serial" ) ||
          0 == exec_space.compare( "Serial" ) ||
@@ -173,7 +191,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             ExaMPM::Solver<Kokkos::HostSpace, Kokkos::Serial>>(
             comm, global_bounding_box, global_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, vorticity, bc );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, center, bc );
 #else
         throw std::runtime_error( "Serial Backend Not Enabled" );
 #endif
@@ -186,7 +204,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             ExaMPM::Solver<Kokkos::HostSpace, Kokkos::OpenMP>>(
             comm, global_bounding_box, global_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, vorticity, bc );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, center, bc );
 #else
         throw std::runtime_error( "OpenMP Backend Not Enabled" );
 #endif
@@ -199,7 +217,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             ExaMPM::Solver<Kokkos::CudaSpace, Kokkos::Cuda>>(
             comm, global_bounding_box, global_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, vorticity, bc );
+            halo_cell_width, create_functor, particles_per_cell, center, cell_size, bc );
 #else
         throw std::runtime_error( "CUDA Backend Not Enabled" );
 #endif
@@ -212,7 +230,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<ExaMPM::Solver<Kokkos::Experimental::HIPSpace,
                                                Kokkos::Experimental::HIP>>(
             comm, global_bounding_box, global_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, vorticity, bc );
+            halo_cell_width, create_functor, particles_per_cell, center, cell_size, bc );
 #else
         throw std::runtime_error( "HIP Backend Not Enabled" );
 #endif

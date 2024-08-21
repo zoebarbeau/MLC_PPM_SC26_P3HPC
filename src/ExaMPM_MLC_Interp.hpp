@@ -144,6 +144,8 @@ KOKKOS_INLINE_FUNCTION
     int ig = floor( (xp[0]+g.center) / g.cell_size );
     int jg = floor( (xp[1]+g.center) / g.cell_size );
     int kg = floor( (xp[2]+g.center) / g.cell_size );
+
+
     for ( int d = 0; d < 3; d++ )
             result[d] += view( ig, jg, kg, d );
 }

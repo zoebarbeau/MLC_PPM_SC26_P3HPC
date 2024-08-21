@@ -21,6 +21,21 @@
 
 namespace ExaMPM
 {
+
+
+namespace Grid
+{
+struct Index
+{
+};
+struct Position
+{
+};
+struct Id
+{
+};
+} 
+
 //---------------------------------------------------------------------------//
 //---------------------------------------------------------------------------//
 template <class MemorySpace>
@@ -30,18 +45,27 @@ class GridManager
     using memory_space = MemorySpace;
     using execution_space = typename memory_space::execution_space;
 
-    using grid_members = Cabana::MemberTypes<int[3]>;
+    using grid_members = Cabana::MemberTypes<int[3], double[3], int>;
     using grid_list = Cabana::AoSoA<grid_members, MemorySpace>;
 
-    template <class ExecutionSpace>
-    GridManager(const ExecutionSpace& exec_space,const int num_D0, const int extent)
+    template <class ExecutionSpace, class ViewType>
+    GridManager(const ExecutionSpace& exec_space,const ViewType& x, const int num_p
+		      ,const int num_D0, const int extent, const double h, const double center)
              : _num_D0( num_D0),
+	       _num_p( num_p ),
 	       _extent( extent ),
-	       _gridp( "A", _num_D0)
+	       _h( h),
+               _center( center ),
+	       _gridp( "A", _num_D0+_num_p)
     {
 
         int particle_counter = 0;
         auto index = Cabana::slice<0>( _gridp );
+	auto positions = Cabana::slice<1>( _gridp );
+        auto id        = Cabana::slice<2>( _gridp );
+	
+	//Add fake grid particles and their positions
+	// The fake particles are the grid D0
         for ( int i = 1; i < _extent; ++i )
           for ( int j = 1; j < _extent; ++j )
                 for ( int k = 1; k < _extent; ++k, ++particle_counter )
@@ -49,19 +73,63 @@ class GridManager
                     index( particle_counter, 0 ) = i;
                     index( particle_counter, 1 ) = j;
                     index( particle_counter, 2 ) = k;
+
+		    positions( particle_counter, 0) = i*h-center;
+		    positions( particle_counter, 1) = j*h-center;
+		    positions( particle_counter, 2) = k*h-center;
+
+		    //Fake particle denoted by an ID of 100
+		    id( particle_counter ) =  100;
                 }
+
+	//Add real particles and their positions
+	int it = 0;
+	for( int p = _num_D0; p < _num_D0+_num_p; p++)
+        {
+		double xp[3] = { x(it,0), x(it,1), x(it,2) };   
+		int i = floor( (xp[0] + _center) / _h);
+	        int j = floor( (xp[1] + _center) / _h);	
+		int k = floor( (xp[2] + _center) / _h);
+
+		index( p, 0 ) = i;
+                index( p, 1 ) = j;
+                index( p, 2 ) = k;
+
+                positions( p, 0) = xp[0];
+                positions( p, 1) = xp[1];
+                positions( p, 2) = xp[2];
+
+		//Real particle denoted by an ID of 1
+		id( p ) = 1;
+		it++;
+	}
+
+               
     }
 
 
+    //Functions to access index, position, and particle ID
     typename grid_list::template member_slice_type<0>
-    get(  ) const
+    get( Grid::Index  ) const
     {
         return Cabana::slice<0>( _gridp, "index" );
     }
 
+    typename grid_list::template member_slice_type<1>
+    get( Grid::Position  ) const
+    {
+        return Cabana::slice<1>( _gridp, "position" );
+    }
+
+    typename grid_list::template member_slice_type<2>
+    get( Grid::Id  ) const
+    {
+        return Cabana::slice<2>( _gridp, "ID" );
+    }
 
   private:
-    int _num_D0;
+    int _num_D0, _num_p;
+    double _h, _center;
     int _extent;
     grid_list _gridp;
 };
