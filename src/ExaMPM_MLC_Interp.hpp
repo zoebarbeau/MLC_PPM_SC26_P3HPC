@@ -134,7 +134,8 @@ KOKKOS_INLINE_FUNCTION
 */
   template <class ViewType, class GridDataType>
 KOKKOS_INLINE_FUNCTION
- void   value( const ViewType& view, const GridDataType& g, typename ViewType::value_type xp[3],
+  std::enable_if_t<3 == GridDataType::num_space_dim, void>
+ value( const ViewType& view, const GridDataType& g, typename ViewType::value_type xp[3],
            typename ViewType::value_type result[3])
 {
 
@@ -149,6 +150,158 @@ KOKKOS_INLINE_FUNCTION
     for ( int d = 0; d < 3; d++ )
             result[d] += view( ig, jg, kg, d );
 }
+
+template<class ViewType, class GridDataType >
+KOKKOS_INLINE_FUNCTION
+ std::enable_if_t<3 == GridDataType::num_space_dim, void>
+  f( const ViewType &view, int i, int j,const int k, const int d,
+         const GridDataType& g,double& fx, double& fy, double& fz)
+{
+
+   double sx_p,sx_m,sy_p,sy_m,sz_p,sz_m;
+
+   //Calculate FX       
+   sx_p = view( i+1,j,k+1,d) + view(i+1,j,k-1,d)
+          +view(i+1,j+1,k,d)  + view(i+1,j-1,k,d);
+
+   sx_m = view( i-1,j,k+1,d) + view( i-1,j,k-1,d)
+          +view( i-1,j+1,k,d) + view( i-1,j-1,k,d);
+
+   fx = (sx_p - sx_m + 2*(view(i+1,j,k,d) - view(i-1,j,k,d)) ) / ( 12.0*g.cell_size );
+
+   // Calculate FY
+   sy_p = view( i,j+1,k+1,d) + view(i,j+1,k-1,d)
+          +view(i+1,j+1,k,d)  + view(i-1,j+1,k,d);
+
+   sy_m = view( i,j-1,k+1,d) + view( i,j-1,k-1,d)
+          +view( i+1,j-1,k,d) + view( i-1,j-1,k,d);
+
+   fy = (sy_p - sy_m + 2*(view(i,j+1,k,d) - view(i,j-1,k,d)) ) / ( 12*g.cell_size );
+
+   // Calculate FZ
+   sz_p = view( i,j+1,k+1,d) + view(i,j-1,k+1,d)
+          +view(i+1,j,k+1,d)  + view(i-1,j,k+1,d);
+
+   sz_m = view( i,j+1,k-1,d) + view( i,j-1,k-1,d)
+          +view( i+1,j,k-1,d) + view( i-1,j,k-1,d);
+
+   fz = (sz_p - sz_m + 2*(view(i,j,k+1,d) - view(i,j,k-1,d)) ) / ( 12*g.cell_size );
+
+
+
+}
+
+template<class ViewType, class GridDataType >
+KOKKOS_INLINE_FUNCTION
+ std::enable_if_t<3 == GridDataType::num_space_dim, void>
+ f2( const ViewType &view, int i, int j, int k,int d,
+	 const GridDataType& g,double& fxx, double& fyy, double& fzz, 
+         double& fxy, double& fxz, double& fyz)
+{
+
+      //Calculate fxx
+      fxx = ( view( i+1,j,k,d) + view(i-1,j,k,d) -2*view(i,j,k,d) ) / pow(g.cell_size, 2.0);
+
+      //Calculate fyy
+      fyy = ( view( i,j+1,k,d ) + view( i,j-1,k,d ) - 2*view(i,j,k,d) ) / pow( g.cell_size, 2.0);
+
+      //Calculate fzz
+      fzz = ( view( i,j,k+1,d ) + view( i,j,k-1,d ) - 2*view(i,j,k,d) ) / pow(g.cell_size, 2.0);
+
+      //Calculate fxy
+      fxy = ( ( view( i+1,j+1,k,d) - view( i-1,j+1,k,d) ) 
+            - ( view( i+1,j-1,k,d) - view( i-1,j-1,k,d) ) ) / (4*pow(g.cell_size, 2.0) );
+
+      fxz = ( ( view( i+1,j,k+1,d) - view( i-1,j,k+1,d ) )
+	    - ( view( i+1,j,k-1,d) - view( i-1,j,k-1,d ) )) / (4*pow(g.cell_size, 2.0 ) );
+
+      fyz = ( ( view( i,j+1,k+1,d) - view( i,j-1,k+1,d) )
+            - ( view( i,j+1,k-1,d) - view( i,j-1,k-1,d) ) ) / (4*pow(g.cell_size, 2.0 ) );      
+
+
+}
+
+template<class ViewType, class GridDataType >
+KOKKOS_INLINE_FUNCTION
+ std::enable_if_t<3 == GridDataType::num_space_dim, void>
+ f3( const ViewType &view, int i, int j, int k,int d,
+         const GridDataType& g,double& fxxy, double& fxxz,
+         double& fyyx, double& fyyz, double& fzzx, double& fzzy, double& fxyz)
+{
+
+     //Calculate fxyz
+
+     fxyz = ( ( (view(i+1,j+1,k+1,d) - view(i-1,j+1,k+1,d))
+	      - (view(i+1,j-1,k+1,d) - view(i-1,j-1,k+1,d))  )
+              - ( (view(i+1,j+1,k-1,d) - view(i-1,j+1,k-1,d))
+              -   (view(i+1,j-1,k-1,d) - view(i-1,j-1,k-1,d))) ) / (8*pow(g.cell_size, 3.0) );
+
+     fxxy = ( (view(i+1,j+1,k,d) - 2*view(i,j+1,k,d) + view(i-1,j+1,k,d) )
+             -(view(i+1,j-1,k,d) - 2*view(i,j-1,k,d) + view(i-1,j-1,k,d) ) ) / (2*pow(g.cell_size, 3.0));
+
+     fxxz = ( (view(i+1,j,k+1,d) - 2*view(i,j,k+1,d) + view(i-1,j,k+1,d) )
+             -(view(i+1,j,k-1,d) - 2*view(i,j,k-1,d) + view(i-1,j,k-1,d) ) ) / (2*pow(g.cell_size, 3.0)); 	     
+     fyyx = ( (view(i+1,j+1,k,d) - 2*view(i+1,j,k,d) + view(i+1,j-1,k,d) )
+             -(view(i-1,j+1,k,d) - 2*view(i-1,j,k,d) + view(i-1,j-1,k,d) ) ) / (2*pow(g.cell_size, 3.0));
+
+     fyyz = ( (view(i,j+1,k+1,d) - 2*view(i,j,k+1,d) + view(i,j-1,k+1,d) )
+             -(view(i,j+1,k-1,d) - 2*view(i,j,k-1,d) + view(i,j-1,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
+
+     fzzx = ( (view(i+1,j,k+1,d) - 2*view(i+1,j,k,d) + view(i+1,j,k-1,d) )
+             -(view(i-1,j,k+1,d) - 2*view(i-1,j,k,d) + view(i-1,j,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
+
+     fzzy = ( (view(i,j+1,k+1,d) - 2*view(i,j+1,k,d) + view(i,j+1,k-1,d) )
+             -(view(i,j-1,k+1,d) - 2*view(i,j-1,k,d) + view(i,j-1,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
+
+
+}
+ template <class ViewType, class GridDataType>
+KOKKOS_INLINE_FUNCTION
+ std::enable_if_t<3 == GridDataType::num_space_dim, void>
+ HarmonicValue( const ViewType& view, const GridDataType& g, typename ViewType::value_type xp[3],
+           typename ViewType::value_type result[3])
+{
+
+    for( int d = 0; d < 3; d++)
+       result[d] = 0.0;
+    
+    // grid index closest to the particle
+    int i = floor( (xp[0]+g.center) / g.cell_size );
+    int j = floor( (xp[1]+g.center) / g.cell_size );
+    int k = floor( (xp[2]+g.center) / g.cell_size );
+    //grid position
+    double xg[3] = { i*g.cell_size - g.center, j*g.cell_size - g.center,
+	             k*g.cell_size - g.center};
+
+    //difference between particle and grid position, needed for interpolation
+    double xdiff[3] = { xp[0]-xg[0], xp[1]-xg[1], xp[2]-xg[2]};
+    double xdiff2[3] = { pow(xdiff[0], 2.0), pow(xdiff[1],2.0), pow(xdiff[2], 2.0) };
+    double fx,fy,fz;
+    double fxx,fyy,fzz,fxy,fyz,fxz;
+    double fxxy,fxxz,fyyx,fyyz,fzzx,fzzy,fxyz;
+    double sx_p, sx_m, sy_p, sy_m, sz_p, sz_m;
+
+    std::cout << " i " << i << " j " << j << " k " << k << " interp" << std::endl;
+    for(int d = 0; d < 3; d++)
+    {
+        f(view,i,j,k,d,g,fx,fy,fz);
+        f2(view,i,j,k,d,g,fxx,fyy,fzz,fxy,fxz,fyz);
+	f3(view,i,j,k,d,g,fxxy,fxxz,fyyx,fyyz,fzzx,fzzy,fxyz);
+
+	result[d] = view(i,j,k,d) + xdiff[0]*fx + xdiff[1]*fy + xdiff[2]*fz
+		    + 0.5*( xdiff2[0]*fxx + xdiff2[1]*fyy + xdiff2[2]*fzz)
+		    + xdiff[0]*xdiff[1]*fxy + xdiff[1]*xdiff[2]*fyz + xdiff[0]*xdiff[2]*fxz
+		    +1.0/6.0*( (3*xdiff2[0] - xdiff2[1])*xdiff[1]*fxxy
+		             + (3*xdiff2[0] - xdiff2[2])*xdiff[2]*fxxz		    
+			     + (3*xdiff2[1] - xdiff2[0])*xdiff[0]*fyyx
+		             + (3*xdiff2[1] - xdiff2[2])*xdiff[2]*fyyz 	     
+                             + (3*xdiff2[2] - xdiff2[0])*xdiff[0]*fzzx
+			     + (3*xdiff2[2] - xdiff2[1])*xdiff[1]*fzzy)
+		    + xdiff[0]*xdiff[1]*xdiff[2]*fxyz;
+    }
+}
+
+
 } //MLC_Interp
 } //ExaMPM
 

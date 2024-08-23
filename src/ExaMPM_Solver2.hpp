@@ -113,12 +113,9 @@ class Solver : public SolverBase
        outputParticles();
        std::cout << " correction " << std::endl;
        LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
-		                     extent,center,cell_size);
-
+	                     extent,center,cell_size);
        std::cout << "interpolation " << std::endl;
-
        LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size ); 
-
        std::cout << " Nbody " << std::endl;
        _step += 1;
        outputParticles();

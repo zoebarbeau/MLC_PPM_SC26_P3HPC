@@ -26,6 +26,289 @@ namespace LocalCorrection
 //---------------------------------------------------------------------------//
 // Particle-to-grid.
 //
+
+ template <class ProblemManagerType, class ExecutionSpace, class GridManager>
+ void Test_F( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
+                        const GridManager& gridp,
+                        const int num_grid, const int extent, const double center, const double h)
+{
+
+   //Gridp is the fake grid particle list, get positions and ids        
+   auto index = gridp.get(Grid::Index());
+   auto gridx = gridp.get(Grid::Position());
+   auto id    = gridp.get(Grid::Id());
+
+   //Get vorticity, velocity, and positions of real particles
+   auto vorticity_p = pm.get(Location::Particle(), Field::Vorticity());
+   auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
+   auto velocity_g = pm.get(Location::Node(), Field::Velocity());
+   auto positions  = pm.get(Location::Particle(), Field::Position());
+
+   Kokkos::deep_copy( velocity_g, 0.0);
+
+   //Get relevant interpolation quantities 
+   MLC_Interp::GridData<3> g( h, center);
+   double pi = Kokkos::numbers::pi;
+   double fx,fy,fz;
+   double fx_e = 0.0,fy_e = 0.0,fz_e = 0.0;
+
+   for(int i = 0; i < extent; i++)
+     for(int j = 0; j < extent; j++)
+        for(int k = 0; k < extent; k++)
+	{
+
+	    double x = i*h - center;
+            double y = j*h - center;	    
+	    double z = k*h - center;
+            for(int d = 0; d < 3; d++)		
+               velocity_g(i,j,k,d) = cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z);
+            
+	}
+
+   for(int i = 1; i < extent-2; i++)
+     for(int j = 1; j < extent-2; j++)
+        for(int k = 1; k < extent-2; k++)
+        {
+
+            double x = i*h - center;
+            double y = j*h - center;
+            double z = k*h - center;
+
+            MLC_Interp::f(velocity_g,i,j,k,0,g,fx,fy,fz);
+            fx_e += abs(fx - (-2*pi*sin(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) ) )*h;
+            fy_e += abs(fy - ( 4*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) ) )*h;
+            fz_e += abs(fz - (-4*pi*cos(2*pi*x)*sin(4*pi*y)*sin(4*pi*z) ) )*h;
+             
+	    std::cout << " fx= " << fx << " fy= " << fy << "fz= " << fz << std::endl;
+	    std::cout << " exact x = " << (-2*pi*sin(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) )
+		      << " exact y = " << ( 4*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) )
+		      << " exact z = " << (-4*pi*cos(2*pi*x)*sin(4*pi*y)*sin(4*pi*z) )
+		      << std::endl;
+	
+	}
+
+   std::cout << " x error = " << fx_e << " y error = " << fy_e << " z error = " << fz_e << std::endl;
+
+}
+
+ template <class ProblemManagerType, class ExecutionSpace, class GridManager>
+ void Test_F2( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
+                        const GridManager& gridp,
+                        const int num_grid, const int extent, const double center, const double h)
+{
+
+   //Gridp is the fake grid particle list, get positions and ids
+   auto index = gridp.get(Grid::Index());
+   auto gridx = gridp.get(Grid::Position());
+   auto id    = gridp.get(Grid::Id());
+
+   //Get vorticity, velocity, and positions of real particles
+   auto vorticity_p = pm.get(Location::Particle(), Field::Vorticity());
+   auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
+   auto velocity_g = pm.get(Location::Node(), Field::Velocity());
+   auto positions  = pm.get(Location::Particle(), Field::Position());
+
+   Kokkos::deep_copy( velocity_g, 0.0);
+
+   //Get relevant interpolation quantities
+   MLC_Interp::GridData<3> g( h, center);
+   double pi = Kokkos::numbers::pi;
+   double fxx,fyy,fzz,fxy,fxz,fyz;
+   double fxx_e = 0.0,fyy_e = 0.0,fzz_e = 0.0;
+   double fxy_e = 0.0, fxz_e = 0.0, fyz_e = 0.0;
+
+   for(int i = 0; i < extent; i++)
+     for(int j = 0; j < extent; j++)
+        for(int k = 0; k < extent; k++)
+        {
+
+            double x = i*h - center;
+            double y = j*h - center;
+            double z = k*h - center;
+            for(int d = 0; d < 3; d++)
+               velocity_g(i,j,k,d) = cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z);
+
+        }
+
+   for(int i = 1; i < extent-2; i++)
+     for(int j = 1; j < extent-2; j++)
+        for(int k = 1; k < extent-2; k++)
+        {
+
+            double x = i*h - center;
+            double y = j*h - center;
+            double z = k*h - center;
+
+            MLC_Interp::f2(velocity_g,i,j,k,0,g,fxx,fyy,fzz,fxy,fxz,fyz);
+	    fxx_e += abs(fxx - (-4*pi*pi*cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) ) )*h;
+            fyy_e += abs(fyy - (-16*pi*pi*cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) ) )*h;
+            fzz_e += abs(fzz - (-16*pi*pi*cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) ) )*h;
+            fxy_e += abs(fxy - (-8*pi*pi*sin(2*pi*x)*cos(4*pi*y)*cos(4*pi*z)  ) )*h;
+	    fxz_e += abs(fxz - ( 8*pi*pi*sin(2*pi*x)*sin(4*pi*y)*sin(4*pi*z)  ) )*h;
+	    fyz_e += abs(fyz - (-16*pi*pi*cos(2*pi*x)*cos(4*pi*y)*sin(4*pi*z) ) )*h;
+
+  /*          std::cout << " fxx = " << fxx << " fyy = " << fyy << " fzz = " << fzz 
+		      << " fxy = " << fxy << " fxz = " << fxz << " fyz = " << fyz << std::endl;
+
+            std::cout << " exact xx = " << (-4*pi*pi*cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) )
+                      << " exact yy = " << (-16*pi*pi*cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) )
+		      << " exact zz = " << (-16*pi*pi*cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) )
+		      << " exact xy = " << (-8*pi*pi*sin(2*pi*x)*cos(4*pi*y)*cos(4*pi*z)  )
+		      << " exact xz = " << (8*pi*pi*sin(2*pi*x)*sin(4*pi*y)*sin(4*pi*z)  )
+		      << " exact yz = " << (-16*pi*pi*cos(2*pi*x)*cos(4*pi*y)*sin(4*pi*z) )
+                      << std::endl; */
+
+
+
+        }
+
+   std::cout << " x error = " << fxx_e << " y error = " << fyy_e << " z error = " << fzz_e  
+	     << " xy error = " << fxy_e << " xz error = " << fxz_e << " yz error = " << fyz_e << std::endl;
+
+}
+
+ template <class ProblemManagerType, class ExecutionSpace, class GridManager>
+ void Test_MLC_Interp( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
+                        const GridManager& gridp,
+                        const int num_grid, const int extent, const double center, const double h)
+{
+
+   //Gridp is the fake grid particle list, get positions and ids
+   auto index = gridp.get(Grid::Index());
+   auto gridx = gridp.get(Grid::Position());
+   auto id    = gridp.get(Grid::Id());
+
+   //Get vorticity, velocity, and positions of real particles
+   auto vorticity_p = pm.get(Location::Particle(), Field::Vorticity());
+   auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
+   auto velocity_g = pm.get(Location::Node(), Field::Velocity());
+   auto positions  = pm.get(Location::Particle(), Field::Position());
+
+   Kokkos::deep_copy( velocity_g, 0.0);
+
+   //Get relevant interpolation quantities
+   MLC_Interp::GridData<3> g( h, center);
+   double pi = Kokkos::numbers::pi;
+
+   for(int i = 0; i < extent; i++)
+     for(int j = 0; j < extent; j++)
+        for(int k = 0; k < extent; k++)
+        {
+
+            double x = i*h - center;
+            double y = j*h - center;
+            double z = k*h - center;
+            for(int d = 0; d < 3; d++)
+               velocity_g(i,j,k,d) = cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z);
+
+//	    std::cout << " velocity g = " << velocity_g(i,j,k,0) << std::endl;
+
+        }
+
+        double error = 0, exact;
+        for(int p = 0; p < pm.numParticle(); p++)
+        {
+
+	    double u_temp[3];
+	    double xp[3] = { positions(p,0), positions(p,1), positions(p,2) };
+	    MLC_Interp::HarmonicValue( velocity_g, g, xp, u_temp );
+
+	    for( int d = 0; d < 3; d++)
+	    {	    
+	       velocity_p(p,d) = u_temp[d];
+	       exact = cos( 2*pi*xp[0] )*sin( 4*pi*xp[1] )*cos( 4*pi*xp[2] );
+
+	       error += abs( exact - velocity_p(p,d) );
+
+	       std::cout << " exact " << exact << " velocity = " << velocity_p(p,d) << std::endl;
+
+            }
+
+	    std::cout << " error = " << error << std::endl;
+
+	    std::cout << " error by particle = " << error/(3*pm.numParticle() ) << std::endl;
+	}
+
+
+}
+ template <class ProblemManagerType, class ExecutionSpace, class GridManager>
+ void Test_F3( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
+                        const GridManager& gridp,
+                        const int num_grid, const int extent, const double center, const double h)
+{
+
+   //Gridp is the fake grid particle list, get positions and ids
+   auto index = gridp.get(Grid::Index());
+   auto gridx = gridp.get(Grid::Position());
+   auto id    = gridp.get(Grid::Id());
+
+   //Get vorticity, velocity, and positions of real particles
+   auto vorticity_p = pm.get(Location::Particle(), Field::Vorticity());
+   auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
+   auto velocity_g = pm.get(Location::Node(), Field::Velocity());
+   auto positions  = pm.get(Location::Particle(), Field::Position());
+
+   Kokkos::deep_copy( velocity_g, 0.0);
+
+   //Get relevant interpolation quantities
+   MLC_Interp::GridData<3> g( h, center);
+   double pi = Kokkos::numbers::pi;
+   double fxxy,fxxz,fyyx,fyyz,fzzx, fzzy, fxyz;
+   double fxxy_e = 0.0,fxxz_e = 0.0,fyyx_e = 0.0;
+   double fyyz_e = 0.0, fzzy_e = 0.0, fzzx_e = 0.0, fxyz_e = 0.0;
+
+   for(int i = 0; i < extent; i++)
+     for(int j = 0; j < extent; j++)
+        for(int k = 0; k < extent; k++)
+        {
+
+            double x = i*h - center;
+            double y = j*h - center;
+            double z = k*h - center;
+            for(int d = 0; d < 3; d++)
+               velocity_g(i,j,k,d) = cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z);
+
+        }
+
+   for(int i = 1; i < extent-2; i++)
+     for(int j = 1; j < extent-2; j++)
+        for(int k = 1; k < extent-2; k++)
+        {
+
+            double x = i*h - center;
+            double y = j*h - center;
+            double z = k*h - center;
+
+            MLC_Interp::f3(velocity_g,i,j,k,0,g,fxxy,fxxz, fyyx, fyyz, fzzx, fzzy, fxyz);
+            fxxy_e += abs(fxxy - (-16*pi*pi*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) ) )*h*h*h;
+            fxxz_e += abs(fxxz - (16*pi*pi*pi*cos(2*pi*x)*sin(4*pi*y)*sin(4*pi*z) ) )*h*h*h;
+            fyyx_e += abs(fyyx - (32*pi*pi*pi*sin(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) ) )*h*h*h;
+            fyyz_e += abs(fyyz - (64*pi*pi*pi*cos(2*pi*x)*sin(4*pi*y)*sin(4*pi*z)  ) )*h*h*h;
+            fzzx_e += abs(fzzx - (32*pi*pi*pi*sin(2*pi*x)*sin(4*pi*y)*cos(4*pi*z)  ) )*h*h*h;
+            fzzy_e += abs(fzzy - (-64*pi*pi*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) ) )*h*h*h;
+	    fxyz_e += abs(fxyz - (32*pi*pi*pi*sin(2*pi*x)*cos(4*pi*y)*sin(4*pi*z)  ) )*h*h*h;
+
+ /*           std::cout << " fxxy = " << fxxy << " fxxz = " << fxxz << " fyyx = " << fyyx
+                      << " fyyz = " << fyyz << " fzzx = " << fzzx << " fzzy = " << fzzy << " fxyz = " << fxyz << std::endl;
+
+            std::cout << " exact xxy = " << (-16*pi*pi*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) )
+                      << " exact xxz = " << (16*pi*pi*pi*cos(2*pi*x)*sin(4*pi*y)*sin(4*pi*z) )
+                      << " exact yyx = " << (32*pi*pi*pi*sin(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) )
+                      << " exact yyz = " << (64*pi*pi*pi*cos(2*pi*x)*sin(4*pi*y)*sin(4*pi*z)  )
+                      << " exact zzx = " << (32*pi*pi*pi*sin(2*pi*x)*sin(4*pi*y)*cos(4*pi*z)  )
+                      << " exact zzy = " << (-64*pi*pi*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) )
+		      << " exact xyz = " << (32*pi*pi*pi*sin(2*pi*x)*cos(4*pi*y)*sin(4*pi*z)  ) 
+                      << std::endl;  */
+
+
+
+        }
+
+   std::cout << " xxy error = " << fxxy_e << " xxz error = " << fxxz_e << " yyx error = " << fyyx_e
+             << " yyz error = " << fyyz_e << " zzx error = " << fzzx_e << " zzy error = " << fzzy_e << " xyz error = " << fxyz_e << std::endl;
+
+}
+
 template <class ProblemManagerType, class ExecutionSpace>
 void Interpolation( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int c, const double center, const double cell_size )
 {
@@ -181,6 +464,7 @@ void Interpolation( const ExecutionSpace& exec_space, const ProblemManagerType& 
              auto offset = Pi_list.binOffset(ii,jj,kk);
              auto size   = Pi_list.binSize(ii,jj,kk);
 
+	     //Interpolate Particles where floor(xp/h) == i
              for( int r = offset; r < offset+size; r++)
              {
 
@@ -196,7 +480,7 @@ void Interpolation( const ExecutionSpace& exec_space, const ProblemManagerType& 
 
 		    //Interpolate from Grid to Particle
 		    // g contains cell size information
-                    MLC_Interp::value( velocity_g, g, xp, u_temp );
+                    MLC_Interp::HarmonicValue( velocity_g, g, xp, u_temp );
 
 		    //Update RHS
                     for(int d = 0; d<3; d++)
