@@ -360,6 +360,156 @@ void Interpolation( const ExecutionSpace& exec_space, const ProblemManagerType& 
 
 }
 
+template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
+ void Deposition( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const NeighborListType& Ci_list,
+                        const GridManager& gridp, const int num_grid, const int extent, const double center, const double h)
+{
+
+   //Gridp is the fake grid particle list, get positions and ids        
+   auto index = gridp.get(Grid::Index());
+   auto gridx = gridp.get(Grid::Position());
+   auto id    = gridp.get(Grid::Id());
+
+   //Get vorticity, velocity, and positions of real particles
+   auto vorticity_p = pm.get(Location::Particle(), Field::Vorticity());
+   auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
+   auto velocity_g = pm.get(Location::Node(), Field::Velocity());
+   auto positions  = pm.get(Location::Particle(), Field::Position());
+   auto F          = pm.get(Location::Node(), Field::F() );
+
+   Kokkos::deep_copy( F, 0.0);
+   Kokkos::deep_copy( velocity_g, 0.0);
+
+   //Get relevant interpolation quantities 
+   MLC_Interp::GridData<3> g( h, center);
+
+   //Iterate over D0 
+   Kokkos::parallel_for(
+        "Depositions",
+        Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, num_grid ),
+        KOKKOS_LAMBDA( const int i ) {
+
+            //D0 Grid Indices
+            int ii = index(i,0);
+            int jj = index(i,1);
+            int kk = index(i,2);
+
+            //ith grid positions
+            double xi[3] = { gridx(i,0), gridx(i,1), gridx(i,2)};
+
+            //Get Ci upper and lower bounds
+            // getParticleBin(i) gives the cell/bin associated with the ith grid point
+            // the max and min values of the stencil is built around this bin
+            int imin, imax, jmin, jmax, kmin, kmax;
+            Ci_list.getStencilCells( Ci_list.getParticleBin( i ), imin,imax, jmin,
+                               jmax, kmin, kmax );
+
+            //Iterate over cell stencil of the linked list = Ci
+            for( int pi = imin; pi < imax; pi++)
+                 for( int pj = jmin; pj < jmax; pj ++)
+                      for( int pk = kmin; pk < kmax; pk ++)
+                      {
+                            //Get Offset and Size to determine # particles
+                             auto Ci_offset = Ci_list.binOffset(pi,pj,pk);
+                             auto Ci_size   = Ci_list.binSize(pi,pj,pk);
+                             //Calculate jh
+                             double xg[3] = { pi*h - center, pj*h - center, pk*h - center};
+
+                             //Loop over Ci
+                             for( std::size_t r = Ci_offset; r < Ci_offset+Ci_size; r++)
+                             {
+
+                                     //Get true particle ID in fake particle list       
+                                     auto j = Ci_list.getParticle( r );
+
+				      //Check that it is a real particle vs fake
+                                     if( id(j) == 1 ){
+
+
+                                         //Get Real Particle ID
+                                         int p = j - num_grid;
+
+                                         // Get Vorticity and Position
+                                         double vortp[3] = { vorticity_p(p,0), vorticity_p(p,1), vorticity_p(p,2) };
+                                         double xp[3]    = { positions(p,0), positions(p,1), positions(p,2) };
+                                         double K[3];
+
+                                         //Calculate Green's Function
+                                         GreensFunction::CalculateK(xg, xp, vortp, K);
+
+                                         //Correct Velocity
+                                         for(int d = 0; d < 3; d++)
+                                             velocity_g(pi, pj, pk, d) += K[d];
+                                     }
+                            }
+
+                      }
+
+         
+	         // Calculate 2nd order Laplacian of each velocity component 
+	         double F_temp[3] = {0.0, 0.0, 0.0};
+                 MLC_Interp::L7(velocity_g,ii,jj,kk,g,F_temp);
+                 
+		 //Set F
+		 for(int d = 0; d < 3; d++)
+		    F(ii,jj,kk,d) += F_temp[d];
+	     
+
+
+	});
+
+}
+
+template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
+ void TestConvolution( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const NeighborListType& Ci_list,
+                        const GridManager& gridp, const int num_grid, const int extent, const double center, const double h)
+{
+
+    auto velocity_g = pm.get(Location::Node(), Field::Velocity());
+    auto positions  = pm.get(Location::Particle(), Field::Position());
+    auto F          = pm.get(Location::Node(), Field::F() );
+ 
+    Kokkos::deep_copy(velocity_g, 0.0);
+
+    //Iterate over D	
+    for(int i = 0; i < extent; i++)
+       for(int j = 0; j < extent; j++)
+          for( int k = 0; j < extent; k++)
+          {
+
+	      double xg[3] = { i*h - center, j*h - center, k*h - center };	  
+	      //iterate over D0	  
+              for(int i0 = 0; i0 < extent; i++)
+                for(int j0 = 0; j0 < extent; j++)
+                   for( int k = 0; j0 < extent; k++)
+                   {
+
+                         double x0[3] = { i0*h - center, j0*h - center, k0*h - center };
+			 double r = pow( pow( x0[0]-xg[0], 2.0) + pow( x0[1]-xg[1], 2.0) + pow( x0[2]-xg[2], 2.0) );
+
+			 if( r < pow(10, -9.0) )
+		         {
+		             for(int d = 0; d < 3; d++)		 
+			        velocity_g(i,j,k,d) += 0.0;
+                         }else{
+
+
+
+                             for(int d = 0; d < 3; d++)
+			        velocity_g(i,j,k,d) += F(i0,j0,k0,d)*1.0/(4*Kokkos::numbers::pi*r);
+
+
+			 }
+ 
+                    }
+
+
+
+
+	  }
+
+
+}
  template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
  void Corrections( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const NeighborListType& Ci_list, const NeighborListType& Pi_list,
@@ -378,7 +528,6 @@ void Interpolation( const ExecutionSpace& exec_space, const ProblemManagerType& 
    auto velocity_g = pm.get(Location::Node(), Field::Velocity());
    auto positions  = pm.get(Location::Particle(), Field::Position());
 
-   Kokkos::deep_copy( velocity_g, 0.0);
 
    //Get relevant interpolation quantities 
    MLC_Interp::GridData<3> g( h, center);

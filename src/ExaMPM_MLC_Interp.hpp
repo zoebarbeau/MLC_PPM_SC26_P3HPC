@@ -255,6 +255,29 @@ KOKKOS_INLINE_FUNCTION
 
 
 }
+
+template<class ViewType, class GridDataType>
+KOKKOS_INLINE_FUNCTION
+ void L7( const ViewType &view, int i, int j, int k, const GridDataType& g, double F[3] )
+{
+
+
+	for(int d = 0; d < 3; d++)
+	    F[d] = 0.0;
+
+        for(int d = 0; d < 3; d++)
+	{
+
+	     F[d] =  ( view(i+1,j,k,d) + view(i-1,j,k,d)
+			+ view(i,j+1,k,d) + view(i,j-1,k,d)
+			+ view(i,j,k+1,d) + view(i,j,k-1,d)
+			- 6*view(i,j,k,d) ) / pow( g.cell_size, 2.0);
+
+	}
+
+
+
+}
  template <class ViewType, class GridDataType>
 KOKKOS_INLINE_FUNCTION
  std::enable_if_t<3 == GridDataType::num_space_dim, void>
@@ -281,7 +304,6 @@ KOKKOS_INLINE_FUNCTION
     double fxxy,fxxz,fyyx,fyyz,fzzx,fzzy,fxyz;
     double sx_p, sx_m, sy_p, sy_m, sz_p, sz_m;
 
-    std::cout << " i " << i << " j " << j << " k " << k << " interp" << std::endl;
     for(int d = 0; d < 3; d++)
     {
         f(view,i,j,k,d,g,fx,fy,fz);

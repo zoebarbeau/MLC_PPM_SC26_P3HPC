@@ -59,6 +59,9 @@ struct Velocity_Nbody
 struct Vortx
 {
 };
+struct F
+{
+};
 } // end namespace Field.
 
 //---------------------------------------------------------------------------//
@@ -116,10 +119,12 @@ class ProblemManager
 	_velocity_nbody = Cabana::Grid::createArray<double, MemorySpace>(
             "velocity_nbody", node_vector_layout );
 
+	_F = Cabana::Grid::createArray<double, MemorySpace>(
+            "F", node_vector_layout );
+
         _node_scatter_halo =
            Cabana::Grid::createHalo( Cabana::Grid::NodeHaloPattern<3>(), -1,
                                       *_vorticity, *_velocity, *_vortx );
-    //
         _node_gather_halo = Cabana::Grid::createHalo(
             Cabana::Grid::NodeHaloPattern<3>(), -1, *_velocity,*_vorticity, *_vortx );
     }
@@ -193,6 +198,10 @@ class ProblemManager
         return _velocity_correction->view();
     }
 
+    typename node_array::view_type get( Location::Node, Field::F ) const
+    {
+        return _F->view();
+    }
 
     // WHAT IS SCATTER FOR
  /*   void scatter( Location::Cell ) const
@@ -225,7 +234,7 @@ class ProblemManager
     std::shared_ptr<mesh_type> _mesh;
     double _amp, _cell_size;
     particle_list _particles;
-    std::shared_ptr<node_array> _vorticity;
+    std::shared_ptr<node_array> _vorticity, _F;
     std::shared_ptr<node_array> _velocity;
     std::shared_ptr<node_array> _velocity_correction;
     std::shared_ptr<node_array> _velocity_nbody;

@@ -40,7 +40,8 @@ template <class MemorySpace, class ExecutionSpace>
 class Solver : public SolverBase
 {
   public:
-    using ListType = Cabana::LinkedCellList<MemorySpace,double>;	  
+    using ListType = Cabana::LinkedCellList<MemorySpace,double>;	 
+    
     template <class InitFunc>
     Solver( MPI_Comm comm, const Kokkos::Array<double, 6>& global_bounding_box,
             const std::array<int, 3>& global_num_cell,
@@ -75,7 +76,7 @@ class Solver : public SolverBase
         double grid_delta[3] = {cell_size, cell_size, cell_size};
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
-        
+        // 
 	//Real Particle Lists
 	//5x5x5 linked cell stencil
         _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,2*cell_size, 0.5);
@@ -100,7 +101,7 @@ class Solver : public SolverBase
 
 	//1x1x1 grid particle list
 	_Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, num_D0+_pm->numParticle(),grid_delta,grid_min,grid_max,cell_size, 1.0);
-        
+
 	MPI_Comm_rank( comm, &_rank );
     }
 
@@ -111,6 +112,8 @@ class Solver : public SolverBase
      	    
         // Output initial state.
        outputParticles();
+
+       LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
        std::cout << " correction " << std::endl;
        LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
 	                     extent,center,cell_size);
