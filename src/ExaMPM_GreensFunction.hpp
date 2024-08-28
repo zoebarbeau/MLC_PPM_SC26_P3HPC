@@ -43,9 +43,18 @@ void CalculateK(const double xp[3],const double xq[3], const double up[3], doubl
 
    }
 
+   std::cout << " xp = " << xp[0] << " yp = " << xp[1] << " zp = " << xp[2] << std::endl;
+   std::cout << " xq = " << xq[0] << " yq = " << xq[1] << " zq = " << xq[2] << std::endl;
+   std::cout << " r = " << r << std::endl;
+   std::cout << K_M[0][0] << " " << K_M[1][0] << " " 
+	     << K_M[0][1] << " " << K_M[1][1] << " "
+	     << K_M[0][2] << " " << K_M[1][2] << " "
+	     << K_M[2][0] << " " << K_M[2][1] << " "
+	     << K_M[2][2] << std::endl;
    DenseLinearAlgebra::matVecMultiply(K_M, up, K);
 
-  
+   if( abs(r) < pow(10,-9.0) )
+	 K[0] = 0; K[1] = 0; K[2] = 0;  
 
 }
 } // end namespace GREENS FUNCTION

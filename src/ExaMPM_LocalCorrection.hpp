@@ -309,57 +309,6 @@ namespace LocalCorrection
 
 }
 
-template <class ProblemManagerType, class ExecutionSpace>
-void Interpolation( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int c, const double center, const double cell_size )
-{
-
-    // Get the particle data we need.
-    // Vort_p is the vorticity vector
-    auto u_p = pm.get( Location::Particle(), Field::Velocity() );
-    auto x_p = pm.get( Location::Particle(), Field::Position() );
-    auto ucorr_p = pm.get( Location::Particle(), Field::Velocity_Correction() );
-
-    // Get the views we need.
-    auto u_i = pm.get( Location::Node(), Field::Velocity() );
-    auto ucorr_i = pm.get(Location::Node(), Field::Velocity_Correction() );
-    //Kokkos::deep_copy(ucorr_i, u_i);
-    Kokkos::deep_copy(ucorr_i, 2.0);
-    // Build the local mesh.
-    auto local_mesh = Cabana::Grid::createLocalMesh<ExecutionSpace>(
-        *( pm.mesh()->localGrid() ) );
-
-    //What does L2G do?
-    auto l2g = Cabana::Grid::IndexConversion::createL2G(
-        *( pm.mesh()->localGrid() ), Cabana::Grid::Node() );
-
-    auto local_nodes = pm.mesh()->localGrid()->indexSpace(
-        Cabana::Grid::Ghost(), Cabana::Grid::Node(), Cabana::Grid::Local() );
-
-    MLC_Interp::GridData<3> g( cell_size, center);
-//G2P particle interpolation:
-   Kokkos::parallel_for(
-        "Interpolation_Nbody",
-        Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, pm.numParticle() ),
-        KOKKOS_LAMBDA( const int p ) {
-
-	    double xp[3] = { x_p( p, 0 ), x_p( p, 1 ), x_p( p, 2 ) };
-
-            // Update particle velocity.
-
-	    double u_temp[3];
-
-	    MLC_Interp::value( ucorr_i, g,xp, u_temp );
-
-            for(int d = 0; d<3; d++){
-                ucorr_p(p, d) = u_temp[d]; 
-
-            }
-
-
-	});
-
-}
-
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
  void Deposition( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const NeighborListType& Ci_list,
                         const GridManager& gridp, const int num_grid, const int extent, const double center, const double h)
@@ -404,48 +353,59 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
             Ci_list.getStencilCells( Ci_list.getParticleBin( i ), imin,imax, jmin,
                                jmax, kmin, kmax );
 
-            //Iterate over cell stencil of the linked list = Ci
-            for( int pi = imin; pi < imax; pi++)
-                 for( int pj = jmin; pj < jmax; pj ++)
-                      for( int pk = kmin; pk < kmax; pk ++)
+	    // Iterate over Ci
+            for( int ci = imin; ci < imax; ci++)
+                 for( int cj = jmin; cj < jmax; cj ++)
+                      for( int ck = kmin; ck < kmax; ck ++)
                       {
-                            //Get Offset and Size to determine # particles
-                             auto Ci_offset = Ci_list.binOffset(pi,pj,pk);
-                             auto Ci_size   = Ci_list.binSize(pi,pj,pk);
-                             //Calculate jh
-                             double xg[3] = { pi*h - center, pj*h - center, pk*h - center};
+			  //Calculate jh
+                          double xg[3] = { ci*h - center, cj*h - center, ck*h - center};    
 
-                             //Loop over Ci
-                             for( std::size_t r = Ci_offset; r < Ci_offset+Ci_size; r++)
-                             {
+                          //Iterate over cell stencil of the linked list = Ci
+                          for( int pi = imin; pi < imax; pi++)
+                              for( int pj = jmin; pj < jmax; pj ++)
+                                  for( int pk = kmin; pk < kmax; pk ++)
+                                  {
+                                      //Get Offset and Size to determine # particles
+                                      auto Ci_offset = Ci_list.binOffset(pi,pj,pk);
+                                      auto Ci_size   = Ci_list.binSize(pi,pj,pk);
 
-                                     //Get true particle ID in fake particle list       
-                                     auto j = Ci_list.getParticle( r );
+                                      //Loop over Ci
+                                      for( std::size_t r = Ci_offset; r < Ci_offset+Ci_size; r++)
+                                      {
 
-				      //Check that it is a real particle vs fake
-                                     if( id(j) == 1 ){
+                                         //Get true particle ID in fake particle list       
+                                         auto j = Ci_list.getParticle( r );
+
+				         //Check that it is a real particle vs fake
+                                         if( id(j) == 1 ){
 
 
-                                         //Get Real Particle ID
-                                         int p = j - num_grid;
+                                            //Get Real Particle ID
+                                            int p = j - num_grid;
+ 
+                                            // Get Vorticity and Position
+                                            double vortp[3] = { vorticity_p(p,0), vorticity_p(p,1), vorticity_p(p,2) };
+                                            double xp[3]    = { positions(p,0), positions(p,1), positions(p,2) };
+                                            double K[3];
 
-                                         // Get Vorticity and Position
-                                         double vortp[3] = { vorticity_p(p,0), vorticity_p(p,1), vorticity_p(p,2) };
-                                         double xp[3]    = { positions(p,0), positions(p,1), positions(p,2) };
-                                         double K[3];
+                                            //Calculate Green's Function
+                                            GreensFunction::CalculateK(xg, xp, vortp, K);
 
-                                         //Calculate Green's Function
-                                         GreensFunction::CalculateK(xg, xp, vortp, K);
+                                            //Correct Velocity
+                                            for(int d = 0; d < 3; d++)
+                                               velocity_g(ci, cj, ck, d) += K[d];
 
-                                         //Correct Velocity
-                                         for(int d = 0; d < 3; d++)
-                                             velocity_g(pi, pj, pk, d) += K[d];
+		            		    std::cout << " K1 = " << K[0] << " K2 = " << K[1] << " K3 = " << K[2] << std::endl;
+		  			    std::cout << ci << " " << cj << " " << ck << std::endl;
+					    std::cout << "min " << imin << " " << jmin << " " << kmin << std::endl;
+					    std::cout << " max "<< imax << " " << jmax << " " << kmax << std::endl;
                                      }
-                            }
+                             }
 
-                      }
+                       }
 
-         
+                  }
 	         // Calculate 2nd order Laplacian of each velocity component 
 	         double F_temp[3] = {0.0, 0.0, 0.0};
                  MLC_Interp::L7(velocity_g,ii,jj,kk,g,F_temp);
@@ -458,6 +418,20 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 	});
 
+       for( int i = 1; i < extent; i++)
+	  for( int j = 1; j < extent; j++)
+	     for( int k = 1; k < extent; k++)
+	     {
+
+		double xgg[3] = {i*h - center, j*h - center, k*h - center };     
+                std::cout << "u = " << velocity_g(i,j,k,0) << " v =  " << velocity_g(i,j,k,1) << " w = " << velocity_g(i,j,k,2) << std::endl;
+		std::cout << "x = " << xgg[0] << " y = " << xgg[1] << " z = " << xgg[2] << std::endl;
+
+
+
+	     }
+
+             std::cout << "deposition " << std::endl;
 }
 
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
@@ -474,39 +448,49 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
     //Iterate over D	
     for(int i = 0; i < extent; i++)
        for(int j = 0; j < extent; j++)
-          for( int k = 0; j < extent; k++)
-          {
+          for( int k = 0; k < extent; k++)
+          { 
 
 	      double xg[3] = { i*h - center, j*h - center, k*h - center };	  
 	      //iterate over D0	  
-              for(int i0 = 0; i0 < extent; i++)
-                for(int j0 = 0; j0 < extent; j++)
-                   for( int k = 0; j0 < extent; k++)
+              for(int i0 = 1; i0 < extent-1; i0++)
+                for(int j0 = 1; j0 < extent-1; j0++)
+                   for( int k0 = 1; k0 < extent-1; k0++)
                    {
 
                          double x0[3] = { i0*h - center, j0*h - center, k0*h - center };
-			 double r = pow( pow( x0[0]-xg[0], 2.0) + pow( x0[1]-xg[1], 2.0) + pow( x0[2]-xg[2], 2.0) );
-
+			 double r = pow( pow( x0[0]-xg[0], 2.0) + pow( x0[1]-xg[1], 2.0) + pow( x0[2]-xg[2], 2.0), 0.5 );
 			 if( r < pow(10, -9.0) )
 		         {
 		             for(int d = 0; d < 3; d++)		 
 			        velocity_g(i,j,k,d) += 0.0;
                          }else{
 
-
-
                              for(int d = 0; d < 3; d++)
-			        velocity_g(i,j,k,d) += F(i0,j0,k0,d)*1.0/(4*Kokkos::numbers::pi*r);
-
+			        velocity_g(i,j,k,d) +=  F(i0,j0,k0,d)*1.0/(4*Kokkos::numbers::pi*r);
 
 			 }
  
                     }
 
+           }
+
+
+    //Print out Velocity
+      for( int i = 1; i < extent; i++)
+          for( int j = 1; j < extent; j++)
+             for( int k = 1; k < extent; k++)
+             {
+
+                double xgg[3] = {i*h - center, j*h - center, k*h - center };
+                std::cout << "u = " << velocity_g(i,j,k,0) << " v =  " << velocity_g(i,j,k,1) << " w = " << velocity_g(i,j,k,2) << std::endl;
+                std::cout << "x = " << xgg[0] << " y = " << xgg[1] << " z = " << xgg[2] << std::endl;
 
 
 
-	  }
+             }
+
+             std::cout << "Test COnvolution " << std::endl;
 
 
 }
@@ -601,6 +585,9 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 					 //Correct Velocity
                                          for(int d = 0; d < 3; d++)
                                              velocity_g(si, sj, sk, d) -= K[d]; 
+
+		//			 std::cout << "corrections Kd " << K[0] << " " << K[1] << " " << K[2] << std::endl;
+
                                      } 
                                 }
 
@@ -634,7 +621,10 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 		    //Update RHS
                     for(int d = 0; d<3; d++)
                        velocity_p(p, d) = u_temp[d];
-
+                    
+		    std::cout << " interpolation " << std::endl; 
+		    std::cout << " u = " << u_temp[0] << " v = " << u_temp[1] << " w = " << u_temp[2] << std::endl;
+		    std::cout << " x = " << xp[0] << " y = " << xp[1] << " z = " << xp[2] << std::endl;
 		 }
              }
 
@@ -677,6 +667,11 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 	//Correct Velocity at P with Local Neighbor Interaction at Q
         for(int d = 0; d < 3; d++){
               u_p(p,d) += K[d];
+
+	std::cout << " interpolation " << std::endl;
+        std::cout << " u = " << u_p(p,0) << " v = " << u_p(p,1) << " w = " << u_p(p,2) << std::endl;
+        std::cout << " x = " << x[0] << " y = " << x[1] << " z = " << x[2] << std::endl;
+
         }
                 
      };

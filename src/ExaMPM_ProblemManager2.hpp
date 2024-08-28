@@ -50,16 +50,10 @@ struct Position
 struct Vorticity
 {
 };
-struct Velocity_Correction
-{
-};
-struct Velocity_Nbody
-{
-};
-struct Vortx
-{
-};
 struct F
+{
+};
+struct Vorticity_hp
 {
 };
 } // end namespace Field.
@@ -73,7 +67,7 @@ class ProblemManager
     using execution_space = typename memory_space::execution_space;
 
     using particle_members =
-        Cabana::MemberTypes<double[3], double[3], double[3],double,double[3], double[3]>;
+        Cabana::MemberTypes<double[3], double[3], double[3]>;
     using particle_list = Cabana::AoSoA<particle_members, MemorySpace>;
     using particle_type = typename particle_list::tuple_type;
 
@@ -91,14 +85,18 @@ class ProblemManager
     template <class InitFunc, class ExecutionSpace>
     ProblemManager( const ExecutionSpace& exec_space,
                     const std::shared_ptr<mesh_type>& mesh,
+		    const std::shared_ptr<mesh_type>& pmesh,
                     const InitFunc& create_functor,
                     const int particles_per_cell, const double cell_size)
         : _mesh( mesh )
+	, _pmesh( pmesh )  
         , _cell_size( cell_size )
         , _particles( "particles" )
     {
-        initializeParticles( exec_space, *( _mesh->localGrid() ),
+        initializeParticles( exec_space, *( _pmesh->localGrid() ),
                              particles_per_cell, create_functor, _particles );
+
+	// Grid Layout
         auto node_vector_layout = Cabana::Grid::createArrayLayout(
             _mesh->localGrid(), 3, Cabana::Grid::Node() );
         auto node_scalar_layout = Cabana::Grid::createArrayLayout(
@@ -106,27 +104,27 @@ class ProblemManager
         auto cell_scalar_layout = Cabana::Grid::createArrayLayout(
             _mesh->localGrid(), 1, Cabana::Grid::Cell() );
 
+	auto pnode_vector_layout = Cabana::Grid::createArrayLayout(
+            _pmesh->localGrid(), 3, Cabana::Grid::Node() );
+
+
         _velocity = Cabana::Grid::createArray<double, MemorySpace>(
             "velocity", node_vector_layout );
         _vorticity = Cabana::Grid::createArray<double, MemorySpace>(
             "vorticity", node_vector_layout );
-        _vortx = Cabana::Grid::createArray<double, MemorySpace>(
-            "vortx", node_scalar_layout );
-
-	_velocity_correction = Cabana::Grid::createArray<double, MemorySpace>(
-            "velocity_correction", node_vector_layout );
-
-	_velocity_nbody = Cabana::Grid::createArray<double, MemorySpace>(
-            "velocity_nbody", node_vector_layout );
-
 	_F = Cabana::Grid::createArray<double, MemorySpace>(
             "F", node_vector_layout );
 
+        _vorticity_hp = Cabana::Grid::createArray<double, MemorySpace>(
+            "vorticity_hp", pnode_vector_layout );
+
         _node_scatter_halo =
            Cabana::Grid::createHalo( Cabana::Grid::NodeHaloPattern<3>(), -1,
-                                      *_vorticity, *_velocity, *_vortx );
+                                      *_vorticity, *_velocity );
         _node_gather_halo = Cabana::Grid::createHalo(
-            Cabana::Grid::NodeHaloPattern<3>(), -1, *_velocity,*_vorticity, *_vortx );
+            Cabana::Grid::NodeHaloPattern<3>(), -1, *_velocity,*_vorticity );
+
+	// Particle Deposition Grid Layout
     }
 
     std::size_t numParticle() const { return _particles.size(); }
@@ -152,30 +150,6 @@ class ProblemManager
     }
 
 
-    typename particle_list::template member_slice_type<3>
-    get( Location::Particle, Field::Vortx ) const
-    {
-        return Cabana::slice<3>( _particles, "vortx" );
-    }
-
-    typename particle_list::template member_slice_type<4>
-    get( Location::Particle, Field::Velocity_Correction ) const
-    {
-        return Cabana::slice<4>( _particles, "velocity_correction" );
-    }
-
-    typename particle_list::template member_slice_type<5>
-    get( Location::Particle, Field::Velocity_Nbody ) const
-    {
-        return Cabana::slice<5>( _particles, "velocity_nbody" );
-    }
-
-    typename node_array::view_type get( Location::Node, Field::Vortx ) const
-    {
-        return _vortx->view();
-    }
-
-
     typename node_array::view_type get( Location::Node, Field::Vorticity ) const
     {
         return _vorticity->view();
@@ -187,20 +161,14 @@ class ProblemManager
         return _velocity->view();
     }
 
-    typename node_array::view_type get( Location::Node, Field::Velocity_Nbody ) const
-    {
-        return _velocity_nbody->view();
-    }
-
-
-    typename node_array::view_type get( Location::Node, Field::Velocity_Correction ) const
-    {
-        return _velocity_correction->view();
-    }
-
     typename node_array::view_type get( Location::Node, Field::F ) const
     {
         return _F->view();
+    }
+
+    typename node_array::view_type get( Location::Node, Field::Vorticity_hp ) const
+    {
+        return _vorticity_hp->view();
     }
 
     // WHAT IS SCATTER FOR
@@ -214,12 +182,12 @@ class ProblemManager
     void scatter( Location::Node ) const
     {
         _node_scatter_halo->scatter( execution_space(),Cabana::Grid::ScatterReduce::Replace(),
-                                     *_vorticity, *_velocity, *_vortx, *_velocity_nbody, *_velocity_correction );
+                                     *_vorticity, *_velocity );
     }
 
     void gather( Location::Node ) const
     {
-        _node_gather_halo->gather( execution_space(), *_velocity, *_vorticity, *_vortx, *_velocity_nbody, *_velocity_correction );
+        _node_gather_halo->gather( execution_space(), *_velocity, *_vorticity );
     }
 
     void communicateParticles( const int minimum_halo_width )
@@ -229,20 +197,26 @@ class ProblemManager
                                            _particles, minimum_halo_width );
     }
 
+    void Resize_Remap( const int num_p )
+    {
+
+       _particles.resize( num_p );
+       _particles.shrinkToFit();
+
+
+    }	    
 
   private:
-    std::shared_ptr<mesh_type> _mesh;
     double _amp, _cell_size;
     particle_list _particles;
     std::shared_ptr<node_array> _vorticity, _F;
-    std::shared_ptr<node_array> _velocity;
-    std::shared_ptr<node_array> _velocity_correction;
-    std::shared_ptr<node_array> _velocity_nbody;
-    std::shared_ptr<node_array> _vortx;
+    std::shared_ptr<node_array> _velocity, _vorticity_hp;
     std::shared_ptr<halo> _node_scatter_halo;
     std::shared_ptr<halo> _node_gather_halo;
     std::shared_ptr<halo> _node_correction_halo;
     std::shared_ptr<halo> _cell_halo;
+    std::shared_ptr<mesh_type> _mesh, _pmesh;
+
 };
 
 //---------------------------------------------------------------------------//
