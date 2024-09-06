@@ -105,7 +105,129 @@ void initializeParticles( const ExecSpace& exec_space,
                           const LocalGridType& local_grid,
                           const int particles_per_cell_dim,
                           const InitFunctor& create_functor,
-                          ParticleList& particles )
+                          ParticleList& particles,
+	                  const double center,
+	                  const double hp)
+{
+    // Kokkos memory space.
+    using memory_space = typename ParticleList::memory_space;
+
+    // Particle type.
+    using particle_type = typename ParticleList::tuple_type;
+
+    // Create a local mesh.
+    auto local_mesh = Cabana::Grid::createLocalMesh<memory_space>( local_grid );
+
+    // Get the local set of owned cell indices.
+    auto owned_cells = local_grid.indexSpace(
+        Cabana::Grid::Own(), Cabana::Grid::Cell(), Cabana::Grid::Local() );
+
+    // Allocate enough space for the case the particles consume the entire
+    // local grid.
+    int particles_per_cell = particles_per_cell_dim * particles_per_cell_dim *
+                             particles_per_cell_dim;
+    int num_particles = particles_per_cell * owned_cells.size();
+    particles.resize( num_particles );
+
+    // Creation status.
+    auto particle_created = Kokkos::View<bool*, memory_space>(
+        Kokkos::ViewAllocateWithoutInitializing( "particle_created" ),
+        num_particles );
+
+    // Initialize particles.
+    int local_num_create = 0;
+    Kokkos::parallel_reduce(
+        "init_particles_uniform",
+        Cabana::Grid::createExecutionPolicy( owned_cells, exec_space ),
+        KOKKOS_LAMBDA( const int i, const int j, const int k,
+                       int& create_count ) {
+            // Compute the owned local cell id.
+            int i_own = i - owned_cells.min( Dim::I );
+            int j_own = j - owned_cells.min( Dim::J );
+            int k_own = k - owned_cells.min( Dim::K );
+            int cell_id =
+                i_own + owned_cells.extent( Dim::I ) *
+                            ( j_own + k_own * owned_cells.extent( Dim::J ) );
+
+        /*  // Get the coordinates of the low cell node.
+            int low_node[3] = { i, j, k };
+            double low_coords[3];
+            local_mesh.coordinates( Cabana::Grid::Node(), low_node,
+                                    low_coords );
+
+            // Get the coordinates of the high cell node.
+            int high_node[3] = { i + 1, j + 1, k + 1 };
+            double high_coords[3];
+            local_mesh.coordinates( Cabana::Grid::Node(), high_node,
+                                    high_coords );
+
+            // Compute the particle spacing in each dimension.
+            double spacing[3] = { ( high_coords[Dim::I] - low_coords[Dim::I] ) /
+                                      particles_per_cell_dim,
+                                  ( high_coords[Dim::J] - low_coords[Dim::J] ) /
+                                      particles_per_cell_dim,
+                                  ( high_coords[Dim::K] - low_coords[Dim::K] ) /
+                                      particles_per_cell_dim };
+
+	    std::cout << i_own << " " << j_own << " " << k_own << " " << std::endl;
+	    std::cout << "low node " << i << " " << j << " " << k << std::endl;
+	    std::cout << " high coords " << high_coords[0] << " " << high_coords[1] << " " << high_coords[2] << std::endl;
+	    std::cout << " low coords " << low_coords[0] << " " << low_coords[1] << " " << low_coords[2] << std::endl;
+	    std::cout << "spacing" << spacing[0] << " " << spacing[1] << " " << spacing[2] << std::endl; */
+            // Particle coordinate. 
+            double px[3];
+
+            // Particle.
+            particle_type particle;
+
+            // Create particles.
+         /*   for ( int ip = 0; ip < particles_per_cell_dim; ++ip )
+                for ( int jp = 0; jp < particles_per_cell_dim; ++jp )
+                    for ( int kp = 0; kp < particles_per_cell_dim; ++kp )
+                    { */
+                        // Local particle id.
+                        int pid = cell_id; // * particles_per_cell + ip +
+                                 // particles_per_cell_dim *
+                                 //     ( jp + particles_per_cell_dim * kp );
+
+                        // Set the particle position.
+                        px[Dim::I] = i_own*hp - center; //0.5 * spacing[Dim::I] +
+                                     //ip * spacing[Dim::I] + low_coords[Dim::I];
+                        px[Dim::J] = j_own*hp - center; //0.5 * spacing[Dim::J] +
+                                     //jp * spacing[Dim::J] + low_coords[Dim::J];
+                        px[Dim::K] = k_own*hp - center; //0.5 * spacing[Dim::K] +
+                                     //kp * spacing[Dim::K] + low_coords[Dim::K];
+
+                        // Create a new particle.
+                        particle_created( pid ) =
+                            create_functor( px, particle );
+
+                        // If we created a new particle insert it into the list.
+                        if ( particle_created( pid ) )
+                        {
+                            particles.setTuple( pid, particle );
+                            ++create_count;
+                        }
+                 //   }
+        },
+        local_num_create );
+
+    // Filter empties.
+    filterEmpties( exec_space, local_num_create, particle_created, particles );
+}
+
+//---------------------------------------------------------------------------//
+template <class ExecSpace, class LocalGridType, class InitFunctor,
+          class ParticleList, class ViewType>
+void remapParticles( const ExecSpace& exec_space,
+                          const LocalGridType& local_grid,
+                          const int particles_per_cell_dim,
+                          const InitFunctor& create_functor,
+			  const ViewType&  vorticity,
+                          ParticleList& particles,
+			  const double center,
+			  const double hp)
+	                  
 {
     // Kokkos memory space.
     using memory_space = typename ParticleList::memory_space;
@@ -150,11 +272,11 @@ void initializeParticles( const ExecSpace& exec_space,
             // Get the coordinates of the low cell node.
             int low_node[3] = { i, j, k };
             double low_coords[3];
-            local_mesh.coordinates( Cabana::Grid::Node(), low_node,
+             local_mesh.coordinates( Cabana::Grid::Node(), low_node,
                                     low_coords );
 
             // Get the coordinates of the high cell node.
-            int high_node[3] = { i + 1, j + 1, k + 1 };
+/*            int high_node[3] = { i + 1, j + 1, k + 1 };
             double high_coords[3];
             local_mesh.coordinates( Cabana::Grid::Node(), high_node,
                                     high_coords );
@@ -167,54 +289,63 @@ void initializeParticles( const ExecSpace& exec_space,
                                   ( high_coords[Dim::K] - low_coords[Dim::K] ) /
                                       particles_per_cell_dim };
 
-/*	    std::cout << i_own << " " << j_own << " " << k_own << " " << std::endl;
-	    std::cout << "low node " << i << " " << j << " " << k << std::endl;
-	    std::cout << " high coords " << high_coords[0] << " " << high_coords[1] << " " << high_coords[2] << std::endl;
-	    std::cout << " low coords " << low_coords[0] << " " << low_coords[1] << " " << low_coords[2] << std::endl;
-	    std::cout << "spacing" << spacing[0] << " " << spacing[1] << " " << spacing[2] << std::endl; */
+	    std::cout << " spacing " << spacing[0] << " "
+		      << spacing[1] 
+		      << spacing[2]
+		      << std::endl;
+
+	    std::cout << " low coords " << low_coords[Dim::I]
+		      << " " << low_coords[Dim::J]
+		      << " " << low_coords[Dim::K]
+		      << std::endl; */
             // Particle coordinate.
             double px[3];
+	    double vort[3] ={ vorticity(i_own,j_own,k_own,0), vorticity(i_own,j_own,k_own,1), vorticity(i_own,j_own,k_own,2) };
+
+	  //  std::cout << vorticity(i,j,k,0) << " " << vorticity(i,j,k,1) << " " << vorticity(i,j,k,2) << std::endl;
 
             // Particle.
             particle_type particle;
 
             // Create particles.
-            for ( int ip = 0; ip < particles_per_cell_dim; ++ip )
+ /*           for ( int ip = 0; ip < particles_per_cell_dim; ++ip )
                 for ( int jp = 0; jp < particles_per_cell_dim; ++jp )
-                    for ( int kp = 0; kp < particles_per_cell_dim; ++kp )
-                    {
+                    for ( int kp = 0; kp < particles_per_cell_dim; ++kp ) */
+                 //   {
                         // Local particle id.
-                        int pid = cell_id * particles_per_cell + ip +
-                                  particles_per_cell_dim *
-                                      ( jp + particles_per_cell_dim * kp );
+                        int pid = cell_id; //* particles_per_cell + ip +
+                                 // particles_per_cell_dim *
+                                 //     ( jp + particles_per_cell_dim * kp );
 
                         // Set the particle position.
-                        px[Dim::I] = 0.5 * spacing[Dim::I] +
-                                     ip * spacing[Dim::I] + low_coords[Dim::I];
-                        px[Dim::J] = 0.5 * spacing[Dim::J] +
-                                     jp * spacing[Dim::J] + low_coords[Dim::J];
-                        px[Dim::K] = 0.5 * spacing[Dim::K] +
-                                     kp * spacing[Dim::K] + low_coords[Dim::K];
+                        px[Dim::I] = i_own*hp - center; // 0.5 * spacing[Dim::I] +
+                                     //ip * spacing[Dim::I] + low_coords[Dim::I];
+                        px[Dim::J] = j_own*hp - center; //0.5 * spacing[Dim::J] +
+                                   //  jp * spacing[Dim::J] + low_coords[Dim::J];
+                        px[Dim::K] = k_own*hp - center; //0.5 * spacing[Dim::K] +
+                                   //  kp * spacing[Dim::K] + low_coords[Dim::K];
 
                         // Create a new particle.
                         particle_created( pid ) =
-                            create_functor( px, particle );
-
+                            create_functor( px, vort, particle );
+                         
                         // If we created a new particle insert it into the list.
                         if ( particle_created( pid ) )
                         {
                             particles.setTuple( pid, particle );
                             ++create_count;
                         }
-                    }
+                  //  }
         },
         local_num_create );
+
+    std::cout << " local num create " << local_num_create << std::endl;
 
     // Filter empties.
     filterEmpties( exec_space, local_num_create, particle_created, particles );
 }
 
-//---------------------------------------------------------------------------//
+
 
 } // end namespace ExaMPM
 

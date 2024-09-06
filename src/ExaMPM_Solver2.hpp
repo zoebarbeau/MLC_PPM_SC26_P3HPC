@@ -19,6 +19,7 @@
 #include <Kokkos_Core.hpp>
 #include <ExaMPM_LocalCorrection.hpp>
 #include <ExaMPM_GridManager.hpp>
+#include <ExaMPM_Remap.hpp>
 #include <memory>
 #include <string>
 
@@ -68,14 +69,15 @@ class Solver : public SolverBase
         _bc.max = _mesh->maxDomainGlobalNodeIndex();
 
         _pm = std::make_shared<ProblemManager<MemorySpace>>(
-            ExecutionSpace(), _mesh, _pmesh, create_functor, particles_per_cell,cell_size);
+            ExecutionSpace(), _mesh, _pmesh, create_functor, particles_per_cell,
+	    cell_size, center, hp);
 
-	double grid_min[3] = { -0.75,
-                               -0.75,
-                               -0.75 };
-        double grid_max[3] = { 0.75,
-                               0.75,
-                               0.75 };
+	double grid_min[3] = { -5,
+                               -5,
+                               -5 };
+        double grid_max[3] = { 5,
+                               5,
+                               5 };
 
         double grid_delta[3] = {cell_size, cell_size, cell_size};
 
@@ -122,17 +124,21 @@ class Solver : public SolverBase
      	    
         // Output initial state.
        outputParticles();
+//       Remap::W44( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
+       Remap::Test_Remap( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
+//       LocalCorrection::test_greens();
+/*       LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
+//       LocalCorrection::Test_L27( ExecutionSpace(), *_pm,*_gridp,num_D0,extent,center,cell_size);
 
-       LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
        std::cout << " correction " << std::endl;
-/*       LocalCorrection::TestConvolution(ExecutionSpace(), *_pm, *_Ci_grid_list,*_gridp,num_D0,
+       LocalCorrection::TestConvolution(ExecutionSpace(), *_pm, *_Ci_grid_list,*_gridp,num_D0,
 	                     extent,center,cell_size);
        std::cout << " test convolution " << std::endl;
        LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                              extent,center,cell_size);
        std::cout << "interpolation " << std::endl;
-       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size ); 
-       std::cout << " Nbody " << std::endl; */
+       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size );  */
+       std::cout << " Nbody " << std::endl;  
        _step += 1;
        outputParticles();
     }
@@ -145,14 +151,14 @@ class Solver : public SolverBase
 #ifdef Cabana_ENABLE_HDF5
         Cabana::Experimental::HDF5ParticleOutput::HDF5Config h5_config;
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
-            h5_config, "particles", _mesh->localGrid()->globalGrid().comm(),
+            h5_config, "remap", _pmesh->localGrid()->globalGrid().comm(),
             _step, _time, _pm->numParticle(),
             _pm->get( Location::Particle(), Field::Position() ),
             _pm->get( Location::Particle(), Field::Vorticity() ) );
 #else
 #ifdef Cabana_ENABLE_SILO
         Cabana::Grid::Experimental::SiloParticleOutput::writeTimeStep(
-            "particles", _mesh->localGrid()->globalGrid(), _step, _time,
+            "remap", _pmesh->localGrid()->globalGrid(), _step, _time,
             _pm->get( Location::Particle(), Field::Position() ),
             _pm->get( Location::Particle(), Field::Vorticity() ));
 

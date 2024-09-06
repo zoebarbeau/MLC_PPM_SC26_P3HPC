@@ -34,27 +34,22 @@ void CalculateK(const double xp[3],const double xq[3], const double up[3], doubl
                         { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
                         { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
 
-   for(int d0 = 0; d0 < 3; d0++){
-     for(int d1 = 0; d1 < 3; d1++){
+   if( r < pow(10.0,-9.0) )
+   {
+         K[0] = 0; K[1] = 0; K[2] = 0;
+   }else
+   {
+      for(int d0 = 0; d0 < 3; d0++){
+         for(int d1 = 0; d1 < 3; d1++){
 
-	     
-        K_M[d0][d1] *= 1/(4*Kokkos::numbers::pi*pow(r, 3.0) );
-     }
+	 
+           K_M[d0][d1] *= 1.0/(4.0*Kokkos::numbers::pi*pow(r, 3.0) );
+        }
+ 
+      }
 
+      DenseLinearAlgebra::matVecMultiply(K_M, up, K);
    }
-
-   std::cout << " xp = " << xp[0] << " yp = " << xp[1] << " zp = " << xp[2] << std::endl;
-   std::cout << " xq = " << xq[0] << " yq = " << xq[1] << " zq = " << xq[2] << std::endl;
-   std::cout << " r = " << r << std::endl;
-   std::cout << K_M[0][0] << " " << K_M[1][0] << " " 
-	     << K_M[0][1] << " " << K_M[1][1] << " "
-	     << K_M[0][2] << " " << K_M[1][2] << " "
-	     << K_M[2][0] << " " << K_M[2][1] << " "
-	     << K_M[2][2] << std::endl;
-   DenseLinearAlgebra::matVecMultiply(K_M, up, K);
-
-   if( abs(r) < pow(10,-9.0) )
-	 K[0] = 0; K[1] = 0; K[2] = 0;  
 
 }
 } // end namespace GREENS FUNCTION

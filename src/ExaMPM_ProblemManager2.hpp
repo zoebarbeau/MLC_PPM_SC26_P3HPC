@@ -56,6 +56,15 @@ struct F
 struct Vorticity_hp
 {
 };
+struct Fx
+{
+};
+struct velx
+{
+};
+struct Velocity_Corr
+{
+};
 } // end namespace Field.
 
 //---------------------------------------------------------------------------//
@@ -82,19 +91,26 @@ class ProblemManager
     using halo = Cabana::Grid::Halo<MemorySpace>;
     using mesh_type = Mesh<MemorySpace>;
 
+    std::shared_ptr<mesh_type> _pmesh;
+
     template <class InitFunc, class ExecutionSpace>
     ProblemManager( const ExecutionSpace& exec_space,
                     const std::shared_ptr<mesh_type>& mesh,
 		    const std::shared_ptr<mesh_type>& pmesh,
                     const InitFunc& create_functor,
-                    const int particles_per_cell, const double cell_size)
+                    const int particles_per_cell, const double cell_size, 
+		    const double center, const double hp)
         : _mesh( mesh )
 	, _pmesh( pmesh )  
         , _cell_size( cell_size )
         , _particles( "particles" )
+	, _ppc( particles_per_cell)
+        , _center(center)
+	, _hp(hp)
     {
         initializeParticles( exec_space, *( _pmesh->localGrid() ),
-                             particles_per_cell, create_functor, _particles );
+                             particles_per_cell, create_functor, _particles,
+		             _center, _hp);
 
 	// Grid Layout
         auto node_vector_layout = Cabana::Grid::createArrayLayout(
@@ -118,11 +134,26 @@ class ProblemManager
         _vorticity_hp = Cabana::Grid::createArray<double, MemorySpace>(
             "vorticity_hp", pnode_vector_layout );
 
+	_velx = Cabana::Grid::createArray<double, MemorySpace>(
+            "velx", node_scalar_layout );
+
+        _Fx = Cabana::Grid::createArray<double, MemorySpace>(
+            "Fx", node_scalar_layout );
+
+        _velocity_corr = Cabana::Grid::createArray<double, MemorySpace>(
+            "velocity_corr", node_vector_layout );
+
         _node_scatter_halo =
            Cabana::Grid::createHalo( Cabana::Grid::NodeHaloPattern<3>(), -1,
                                       *_vorticity, *_velocity );
         _node_gather_halo = Cabana::Grid::createHalo(
             Cabana::Grid::NodeHaloPattern<3>(), -1, *_velocity,*_vorticity );
+
+        std::array<std::string, 4> names;
+        names[0] = "F"; names[1] = "lap_u";
+        names[2] = "pre_corr_v"; names[3] = "post_corr_v";
+        // create an array and store the name of each variable:
+
 
 	// Particle Deposition Grid Layout
     }
@@ -161,6 +192,12 @@ class ProblemManager
         return _velocity->view();
     }
 
+    typename node_array::view_type get( Location::Node, Field::Velocity_Corr ) const
+    {
+        return _velocity_corr->view();
+    }
+
+
     typename node_array::view_type get( Location::Node, Field::F ) const
     {
         return _F->view();
@@ -170,6 +207,17 @@ class ProblemManager
     {
         return _vorticity_hp->view();
     }
+
+    typename node_array::view_type get( Location::Node, Field::velx ) const
+    {
+        return _velx->view();
+    }
+
+    typename node_array::view_type get( Location::Node, Field::Fx ) const
+    {
+        return _Fx->view();
+    }
+
 
     // WHAT IS SCATTER FOR
  /*   void scatter( Location::Cell ) const
@@ -197,25 +245,54 @@ class ProblemManager
                                            _particles, minimum_halo_width );
     }
 
-    void Resize_Remap( const int num_p )
+    template <class InitFunc, class ExecutionSpace, class ViewType>
+    void Resize_Remap(const ExecutionSpace& exec_space, 
+		      const InitFunc& create_functor,
+		      const ViewType& view ) 
     {
 
-       _particles.resize( num_p );
+       auto vorticity_g = get( Location::Node(), Field::Vorticity_hp());
+       _particles.resize( 0 );
        _particles.shrinkToFit();
+       remapParticles( exec_space, *( _pmesh->localGrid() ),
+                             _ppc, create_functor, vorticity_g, _particles,
+		             _center, _hp );
 
 
     }	    
 
+    void save_F(std::string run_name, const int timesteps_done, const double time) const
+    {   std::stringstream name;
+        name << run_name << "_" << _Fx->label();
+        const std::string prefix = name.str();
+        Cabana::Grid::Experimental::BovWriter::writeTimeStep(prefix,timesteps_done, time, *_Fx);
+    }
+
+    void save_v(std::string run_name, const int timesteps_done, const double time) const
+    {   std::stringstream name;
+        name << run_name << "_" << _velx->label();
+        const std::string prefix = name.str();
+        Cabana::Grid::Experimental::BovWriter::writeTimeStep(prefix,timesteps_done, time, *_velx);
+    }
+
+
+
+
+
+
+
   private:
-    double _amp, _cell_size;
+    double _amp, _cell_size,_hp, _center;
+    int _ppc;
     particle_list _particles;
+    std::shared_ptr<node_array> _velx,_Fx;
     std::shared_ptr<node_array> _vorticity, _F;
-    std::shared_ptr<node_array> _velocity, _vorticity_hp;
+    std::shared_ptr<node_array> _velocity,_velocity_corr,_vorticity_hp;
     std::shared_ptr<halo> _node_scatter_halo;
     std::shared_ptr<halo> _node_gather_halo;
     std::shared_ptr<halo> _node_correction_halo;
     std::shared_ptr<halo> _cell_halo;
-    std::shared_ptr<mesh_type> _mesh, _pmesh;
+    std::shared_ptr<mesh_type> _mesh;
 
 };
 

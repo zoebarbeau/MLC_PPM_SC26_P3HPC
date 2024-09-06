@@ -18,6 +18,8 @@
 #include <ExaMPM_GridManager.hpp>
 #include <Kokkos_Core.hpp>
 #include <cmath>
+#include <vector>
+#include <array>
 namespace ExaMPM
 {
 namespace Remap
@@ -25,12 +27,42 @@ namespace Remap
 //---------------------------------------------------------------------------//
 // Particle-to-grid.
 //
+struct RemapInitFunc
+{
+    template <class ParticleType>
+    KOKKOS_INLINE_FUNCTION bool operator()( const double x[3],
+		                            const double vort[3],
+                                            ParticleType& p ) const
+    {
 
-void W44_Weight(double W44[3], double xg[3], double xp[3], double hg, double hp)
+       double vort_magn = pow( pow( vort[0] , 2.0) +
+	                       pow( vort[1] , 2.0) +
+		               pow( vort[2] , 2.0), 0.5);
+
+       if ( vort_magn > pow(10,-4.0) ) 
+       {
+   //        std::cout << " vorticity magn " << std::endl;
+	   for(int d = 0; d < 3; d++)    
+	   {  
+              Cabana::get<0>( p, d ) = vort[d]; 
+	      Cabana::get<1>( p, d ) = 0.0;
+              Cabana::get<2>( p, d ) = x[d];
+           }
+
+	   return true;
+
+       }
+       
+       return false;
+	      
+   }
+};
+void W44_Weight(double W44[3], double x_g[3], double x_p[3], double hg, double hp)
 {
     int n = 10;	
     double a[n], b[n], g[n];
     double ratio = pow(hp/hg, 3.0);
+    double d[3];
     int DIM = 3;
 
     //Coefficients for interpolation
@@ -55,7 +87,7 @@ void W44_Weight(double W44[3], double xg[3], double xp[3], double hg, double hp)
      {
 
            //difference between particle location and stencil location
-           d[j] = ( abs((x_g[j] - x_p[j]) / hg ) );
+           d[j] = ( std::abs((x_g[j] - x_p[j]) / hg ) );
 
            W44[j] = 0.0;
 
@@ -89,8 +121,8 @@ void W44_Weight(double W44[3], double xg[3], double xp[3], double hg, double hp)
 
 }
 
-template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
-void W44( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
+template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
+void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
                         const NeighborListType& W44_list, const double center, const double h, const double hp)
 {
 
@@ -99,7 +131,10 @@ void W44( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
    auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
    auto vorticity_g = pm.get(Location::Node(), Field::Vorticity_hp());
    auto positions  = pm.get(Location::Particle(), Field::Position());
-   int new_p = 0;
+   double ratio = pow(h/hp, 3.0);
+
+   std::cout << " ratio " << ratio << std::endl;
+
    //Iterate over D0 
    Kokkos::parallel_for(
         "W44",
@@ -125,7 +160,7 @@ void W44( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                      {
 
 			  double weights[3];   
-                          xg = {i*h - center, j*h - center, k*h - center};
+                          double xg[3] = {i*h - center, j*h - center, k*h - center};
 			  //Calculate Weights
                           W44_Weight(weights, xg, xp, h, hp);
                           for(int d = 0; d < 3; d++)
@@ -138,27 +173,69 @@ void W44( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
         });
 
 
-       Cabana::Grid::grid_parallel_reduce(
-        "find numParticles", exec_space(), *(pm._pmesh->local_grid), Cabana::Grid::Ghost(),
-        Cabana::Grid::Node(),
-        KOKKOS_LAMBDA( const int i, const int j, const int k )
-       	{
+       pm.Resize_Remap( exec_space, RemapInitFunc(), vorticity_g );
+          
 
-	   double vort_magn = pow( pow( vorticity_g(i,j,k,0) , 2.0) +
-			           pow( vorticity_g(i,j,k,1) , 2.0) +
-				   pow( vorticity_g(i,j,k,2) , 2.0) , 0.5 );
+}
 
+template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
+void Test_Remap( const ExecutionSpace& exec_space, ProblemManagerType& pm,
+                        const NeighborListType& W44_list, const double center, const double h, const double hp)
+{
+          
+	  std::cout << " pre-remap num p " << pm.numParticle() << std::endl;
 
-	   if( vort_magn < pow(10, -9.0)
-	      new_p++;
+          W44( exec_space, pm, W44_list, center, hp, hp);
+          auto vorticity_p = pm.get(Location::Particle(), Field::Vorticity());
+          auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
+          auto vorticity_g = pm.get(Location::Node(), Field::Vorticity_hp());
+          auto positions  = pm.get(Location::Particle(), Field::Position());
+ 
+	  std::cout << " post-remap num p " << pm.numParticle() << std::endl;
 
-        }, new_p);
+	  for(int p = 0; p < pm.numParticle(); p++)
+	  {
 
-	pm.Resize_Remap( new_p );
-        update_particle( pm );	
-       	   
+            std::cout << "x = " << positions(p,0) << " y = "
+		      << positions(p,1) << " z = " 
+		      << positions(p,2) << std::endl;
 
+	    std::cout << " vort " << vorticity_p(p,0) << " " << vorticity_p(p,1) << " "
+		      << vorticity_p(p,2) << std::endl;
 
+	  }
+	  
+}
+template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
+void Test_Remap_Particles( const ExecutionSpace& exec_space, ProblemManagerType& pm,
+                        const NeighborListType& W44_list, const double center, const double h, const double hp)
+{
+
+	auto vorticity_g = pm.get(Location::Node(), Field::Vorticity_hp());
+
+	Kokkos::deep_copy(vorticity_g, 0.0);
+
+	int i = 1, j = 1, k = 1;
+	for(int d = 0; d < 3; d++)
+ 	   vorticity_g(i,j,k,d) = 1.0;
+
+	vorticity_g(0,0,0,0) = 1.0;
+	std::cout << vorticity_g(i,j,k,0) << " vorticity 1 1 1 " << std::endl;
+        std::cout << "OG position " << i*hp - center << std::endl;
+	pm.Resize_Remap( exec_space, RemapInitFunc(), vorticity_g );
+        auto vorticity_p = pm.get(Location::Particle(), Field::Vorticity());
+        auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
+        auto positions  = pm.get(Location::Particle(), Field::Position());
+
+	std::cout << "particle size" << pm.numParticle() << std::endl;
+
+	for(int p = 0; p < pm.numParticle(); p++)
+	{	
+     	    std::cout << " vorticity " << vorticity_p(p,0) << " " << vorticity_p(p,1) << " " << vorticity_p(p,2) << std::endl;
+	    std::cout << " velocity "  << velocity_p(p,0)  << " " << velocity_p(p,1)  << " " << velocity_p(p,2)  << std::endl;
+	    std::cout << " positions " << positions(p,0)   << " " << positions(p,1)   << " " << positions(p,2)   << std::endl;
+
+	}
 }
 
 } // end namespace REMAP

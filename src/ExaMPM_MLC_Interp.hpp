@@ -278,6 +278,71 @@ KOKKOS_INLINE_FUNCTION
 
 
 }
+
+template<class ViewType, class GridDataType>
+KOKKOS_INLINE_FUNCTION
+ void L27( const ViewType &view, int i, int j, int k, const GridDataType& g, double F[3] )
+{
+
+
+	double u_face[3] = {0.0,0.0,0.0};
+        double u_corner[3] = {0.0,0.0,0.0};
+	double u_edge[3] = {0.0,0.0,0.0};
+
+        for(int d = 0; d < 3; d++)
+            F[d] = 0.0;
+
+
+	for(int si = i-1; si <= i+1; si++)
+	   for(int sj = j-1; sj <= j+1; sj++)
+              for(int sk = k-1; sk <= k+1; sk++)
+              {
+ 
+		 int s1 = si-i;
+		 int s2 = sj-j;
+		 int s3 = sk-k;
+
+		 int  s = abs(s1) + abs(s2) + abs(s3);
+
+	//	 std::cout << " s1 = " << s1 << " s2 = " << s2 << " s3 " << s3 << std::endl;
+	//	 std::cout << " s = " << s << std::endl;
+		  if( s == 1)
+	          {
+                     
+		    for(int d = 0; d < 3; d++)
+		       u_face[d] += view(si,sj,sk,d);
+		    
+ 
+		  }else if( s == 2)
+		  {
+
+		    for(int d = 0; d < 3; d++)
+                       u_edge[d] += view(si,sj,sk,d);
+
+		  }else if( s == 3)
+                  {
+
+		     for(int d = 0; d < 3; d++)
+                       u_corner[d] += view(si,sj,sk,d);
+
+
+		  }	  
+
+
+	      }	      
+
+
+        for(int d = 0; d < 3; d++)
+        {
+
+             F[d] = ( view(i,j,k,d)*-128.0/30.0 + u_corner[d]*1.0/30.0
+			+ u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) / pow( g.cell_size, 2.0);    
+
+        }
+
+
+}
+
  template <class ViewType, class GridDataType>
 KOKKOS_INLINE_FUNCTION
  std::enable_if_t<3 == GridDataType::num_space_dim, void>
@@ -320,6 +385,11 @@ KOKKOS_INLINE_FUNCTION
                              + (3*xdiff2[2] - xdiff2[0])*xdiff[0]*fzzx
 			     + (3*xdiff2[2] - xdiff2[1])*xdiff[1]*fzzy)
 		    + xdiff[0]*xdiff[1]*xdiff[2]*fxyz;
+//	std::cout << "velocity interp " << view(i,j,k,d) << std::endl;
+/*	std::cout << " fx " << fx << " fy " << fy << " fz " << fz << std::endl;
+	std::cout << " fxx " << fxx << " fyy " << fyy << " fzz " << std::endl;
+	std::cout << " fxxy " << fxxy << " fxxz " << fxxz << " fyyx " << fyyx << " fyyz " << fyyz 
+		  << " fzzx " << fzzx << " fzzy " << fzzy << std::endl; */
     }
 }
 
