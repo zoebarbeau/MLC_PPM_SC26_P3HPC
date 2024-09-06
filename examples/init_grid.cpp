@@ -17,10 +17,10 @@
 // from [0,0.4] in X, [0,0.6] in Z, with the entire Y domain filled.
 struct ParticleInitFunc
 {
-    double _vorticity;
+    double _hp;
     double _h;
-    ParticleInitFunc( const double cell_size, const double amp )
-        : _vorticity( amp ), _h(cell_size)
+    ParticleInitFunc( const double cell_size, const double hp )
+        : _hp( hp ), _h(cell_size)
     {
     }
 
@@ -35,7 +35,7 @@ struct ParticleInitFunc
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
         q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
-       if ( (q <= 0.70) ) //0.65) ) //&& (r >= 0.35) )
+       if ( (q <= 3) ) //0.65) ) //&& (r >= 0.35) )
        {  
 
 	//Stuff for a Vortex Ring	
@@ -55,23 +55,22 @@ struct ParticleInitFunc
 */	           
               // Vorticity
               vortz = 0;
-	      vortx = x[1]+0.5*_h; 
-	      vorty = -(x[0]+0.5*_h); 
-	      Cabana::get<0>( p, 0 ) = vortx;
-              Cabana::get<0>( p, 1 ) = vorty;
-	      Cabana::get<0>( p, 2) = 0.0;
+	      vortx = x[1]; 
+	      vorty = -(x[0]); 
+	      Cabana::get<0>( p, 0 ) = 1.0; //vortx;
+              Cabana::get<0>( p, 1 ) = 1.0; //vorty;
+              Cabana::get<0>( p, 2) = 1.0;
 
               // Velocity
               for ( int d = 0; d < 3; ++d ){
                 Cabana::get<1>( p, d ) = 0.0;
-		Cabana::get<4>( p, d ) = 0.0;
-		Cabana::get<5>( p, d ) = 0.0;
               }
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d]; // + 0.125; //0.5*_h;
-     
-	      Cabana::get<3>(p) = 1.0;
+                 Cabana::get<2>( p, d ) = x[d]+0.1*_hp; // + 0.125; //0.5*_h;
+               std::cout << Cabana::get<2>(p,0) << " "
+		         << Cabana::get<2>(p,1) << " "
+			 << Cabana::get<2>(p,2) << std::endl; 
 	      return true;
 //	    } 
       }
@@ -82,18 +81,23 @@ struct ParticleInitFunc
 
 //---------------------------------------------------------------------------//
 void initgrid(const double cell_size, const int ppc, const int halo_size,
-               const std::string& exec_space, const double vorticity )
+               const std::string& exec_space, const double hp )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
-    Kokkos::Array<double, 6> global_box = {-0.75, -0.75, -0.75, 0.75, 0.75, 0.75}; // { -0.75, -0.75, -0.75, 0.75, 0.75, 0.75 };
-    double center = 0.75;
+    Kokkos::Array<double, 6> global_box = { -5, -5,-5, 5, 5, 5 };
+    double center = 5;
     int c      = 4;
     // Compute the number of cells in each direction. The user input must
     // squarely divide the domain.
     std::array<int, 3> global_num_cell = {
-        static_cast<int>( 1.5 / cell_size ),
-        static_cast<int>( 1.5 / cell_size ),
-        static_cast<int>( 1.5 / cell_size ) };
+        static_cast<int>( 10.0 / cell_size ),
+        static_cast<int>( 10.0 / cell_size ),
+        static_cast<int>( 10.0 / cell_size ) };
+
+    std::array<int, 3> pgrid_num_cell = {
+        static_cast<int>( 10.0 / hp ),
+        static_cast<int>( 10.0 / hp ),
+        static_cast<int>( 10.0 / hp ) };
 
     // This will look like a 2D problem so make the Y direction periodic.
     std::array<bool, 3> periodic = { false, false, false };
@@ -119,9 +123,9 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     int write_freq = 1;
     // Solve the problem.
     auto solver = ExaMPM::createSolver(
-        exec_space, MPI_COMM_WORLD, global_box, global_num_cell, periodic,
-        partitioner, halo_size, ParticleInitFunc( cell_size, vorticity ),ppc,cell_size, bc );
-    solver->solve( t_final, write_freq,center,c,cell_size );
+        exec_space, MPI_COMM_WORLD, global_box, global_num_cell,pgrid_num_cell, periodic,
+        partitioner, halo_size, ParticleInitFunc( cell_size, hp ),ppc,cell_size,hp,center,bc);
+    solver->solve( t_final, write_freq,center,c,cell_size,hp );
 }
 
 //---------------------------------------------------------------------------//
@@ -147,7 +151,9 @@ int main( int argc, char* argv[] )
             << "      write_freq      number of steps between output files\n";
         std::cerr << "      exec_space      execute with: serial, openmp, "
                      "cuda, hip\n";
-        std::cerr << "\nfor example: ./init_grid 0.05 2 0 serial 1\n";
+	std::cerr << "\nwhere hp       edge length of a computational "
+                     "cell for particle deposition\n";
+        std::cerr << "\nfor example: ./init_grid 0.05 2 0 serial 0.025\n";
         Kokkos::finalize();
         MPI_Finalize();
         return 0;
@@ -166,11 +172,11 @@ int main( int argc, char* argv[] )
 
     //vorticity
     //
-    double vorticity = std::atof( argv[5] );
+    double hp = std::atof( argv[5] );
 
     // run the problem.
     initgrid( cell_size, ppc, halo_size,
-              exec_space, vorticity );
+              exec_space, hp );
 
     Kokkos::finalize();
 
