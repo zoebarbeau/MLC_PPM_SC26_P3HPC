@@ -35,7 +35,7 @@ struct ParticleInitFunc
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
         q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
-       if ( (q <= 3) ) //0.65) ) //&& (r >= 0.35) )
+       if ( (q <= 3) ) 
        {  
 
 	//Stuff for a Vortex Ring	
@@ -67,10 +67,7 @@ struct ParticleInitFunc
               }
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d]+0.1*_hp; // + 0.125; //0.5*_h;
-               std::cout << Cabana::get<2>(p,0) << " "
-		         << Cabana::get<2>(p,1) << " "
-			 << Cabana::get<2>(p,2) << std::endl; 
+                 Cabana::get<2>( p, d ) = x[d]; 
 	      return true;
 //	    } 
       }
@@ -143,7 +140,7 @@ int main( int argc, char* argv[] )
         std::cerr << "\nwhere cell_size       edge length of a computational "
                      "cell (domain is unit cube)\n";
         std::cerr
-            << "      parts_per_cell  particles per cell in each direction\n";
+            << "  CHOOSE 1--need to update, particles_per_cell  particles per cell in each direction\n";
         std::cerr << "      halo_cells      number of halo cells\n";
         std::cerr << "      dt              time step size\n";
         std::cerr << "      t_end           simulation end time\n";
