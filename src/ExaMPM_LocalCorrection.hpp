@@ -559,8 +559,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 	     }
 
              pm.save_F( "Initial_F",1,0);
-	     std::cout << " number nonzero " << num_nonzero << std::endl;
-             std::cout << "deposition " << std::endl;
+//	     std::cout << " number nonzero " << num_nonzero << std::endl;
+//             std::cout << "deposition " << std::endl;
 }
 
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
@@ -636,7 +636,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
              }
 
-             std::cout << "Test COnvolution " << std::endl;
+          //   std::cout << "Test COnvolution " << std::endl;
              pm.save_F( "Laplacian_V",1,0);
 
 }
@@ -712,9 +712,9 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                        for(int sj = jj-1; sj <= jj+1; sj++)
                            for( int sk = kk-1; sk <= kk+1; sk++)
                            {
-                                  std::cout << "precorrection " << velocity_g(si,sj,sk,0)
+                             /*     std::cout << "precorrection " << velocity_g(si,sj,sk,0)
                                             << " " << velocity_g(si,sj,sk,1)
-                                            << " " << velocity_g(si,sj,sk,2) << std::endl;
+                                            << " " << velocity_g(si,sj,sk,2) << std::endl; */
            			  for(int d = 0; d < 3; d++)
                                      velocity_corr(si,sj,sk,d) = velocity_g(si,sj,sk,d);
 
@@ -806,14 +806,14 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                        for(int sj = jj-1; sj <= jj+1; sj++)
                            for( int sk = kk-1; sk <= kk+1; sk++)
                            {
-                                  std::cout << "post correction " << velocity_corr(si,sj,sk,0) 
-					    << " " << velocity_corr(si,sj,sk,1)
-					    << " " << velocity_corr(si,sj,sk,2) << std::endl;
+                            //      std::cout << "post correction " << velocity_corr(si,sj,sk,0) 
+			    //		    << " " << velocity_corr(si,sj,sk,1)
+			    //		    << " " << velocity_corr(si,sj,sk,2) << std::endl;
  
 		           }
-		    std::cout << " interpolation " << std::endl; 
+		/*    std::cout << " interpolation " << std::endl; 
 		    std::cout << " u = " << u_temp[0] << " v = " << u_temp[1] << " w = " << u_temp[2] << std::endl;
-		    std::cout << " x = " << xp[0] << " y = " << xp[1] << " z = " << xp[2] << std::endl;
+		    std::cout << " x = " << xp[0] << " y = " << xp[1] << " z = " << xp[2] << std::endl; */
 		    
 		 }
              }
@@ -861,9 +861,9 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
         for(int d = 0; d < 3; d++){
               u_p(p,d) += K[d];
 
-	std::cout << " interpolation " << std::endl;
+/*	std::cout << " interpolation " << std::endl;
         std::cout << " u = " << u_p(p,0) << " v = " << u_p(p,1) << " w = " << u_p(p,2) << std::endl;
-        std::cout << " x = " << x[0] << " y = " << x[1] << " z = " << x[2] << std::endl;
+        std::cout << " x = " << x[0] << " y = " << x[1] << " z = " << x[2] << std::endl; */
 
         }
                 

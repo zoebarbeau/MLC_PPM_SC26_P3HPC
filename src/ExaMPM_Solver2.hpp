@@ -20,6 +20,7 @@
 #include <ExaMPM_LocalCorrection.hpp>
 #include <ExaMPM_GridManager.hpp>
 #include <ExaMPM_Remap.hpp>
+#include <ExaMPM_Convolution.hpp>
 #include <memory>
 #include <string>
 
@@ -72,12 +73,12 @@ class Solver : public SolverBase
             ExecutionSpace(), _mesh, _pmesh, create_functor, particles_per_cell,
 	    cell_size, center, hp);
 
-	double grid_min[3] = { -5,
-                               -5,
-                               -5 };
-        double grid_max[3] = { 5,
-                               5,
-                               5 };
+	double grid_min[3] = { global_bounding_box[0],
+                               global_bounding_box[1],
+                               global_bounding_box[2] };
+        double grid_max[3] = { global_bounding_box[3],
+                               global_bounding_box[4],
+                               global_bounding_box[5] };
 
         double grid_delta[3] = {cell_size, cell_size, cell_size};
 
@@ -124,21 +125,15 @@ class Solver : public SolverBase
      	    
         // Output initial state.
        outputParticles();
-//       Remap::W44( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
-       Remap::Test_Remap( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
-//       LocalCorrection::test_greens();
-/*       LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
-//       LocalCorrection::Test_L27( ExecutionSpace(), *_pm,*_gridp,num_D0,extent,center,cell_size);
 
-       std::cout << " correction " << std::endl;
-       LocalCorrection::TestConvolution(ExecutionSpace(), *_pm, *_Ci_grid_list,*_gridp,num_D0,
-	                     extent,center,cell_size);
-       std::cout << " test convolution " << std::endl;
+       LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
+
        LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                              extent,center,cell_size);
-       std::cout << "interpolation " << std::endl;
-       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size );  */
-       std::cout << " Nbody " << std::endl;  
+
+       Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
+
+       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size ); 
        _step += 1;
        outputParticles();
     }
