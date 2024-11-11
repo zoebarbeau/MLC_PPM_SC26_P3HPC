@@ -36,7 +36,7 @@ void test_greens( )
        double xp[3]    = { 0.5, 0.5, 0.5};
        double K[3];
        //Calculate Green's Function
-       GreensFunction::CalculateK(xp, xq, vortp, K);
+       GreensFunction::Calculate_qK(xp, xq, vortp, K);
 
        std::cout << " K = " << K[0] << "  " << K[1] << " " << K[2] << std::endl;
 
@@ -479,7 +479,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                    double K[3];
 
                                    //Calculate Green's Function
-                                   GreensFunction::CalculateK(xg, xp, vortp, K);
+                                   GreensFunction::Calculate_qK(xg, xp, vortp, K);
 
                                    //Correct Velocity
                                    for(int d = 0; d < 3; d++)
@@ -763,7 +763,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                          double K[3];
 
 					 //Calculate Green's Function
-                                         GreensFunction::CalculateK(xg, xp, vortp, K);
+                                         GreensFunction::Calculate_qK(xg, xp, vortp, K);
 
 					 //Correct Velocity
                                          for(int d = 0; d < 3; d++)
@@ -854,7 +854,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
         double K[3];
 
         //Evaluate Green's Function with number
-        GreensFunction::CalculateK(x, xq, vort, K);
+        GreensFunction::Calculate_qK(x, xq, vort, K);
 
 
 	//Correct Velocity at P with Local Neighbor Interaction at Q

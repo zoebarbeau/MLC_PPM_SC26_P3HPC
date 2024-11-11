@@ -131,7 +131,8 @@ class Solver : public SolverBase
        LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                              extent,center,cell_size);
 
-       Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
+       //    Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
+       Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
 
        LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size ); 
        _step += 1;

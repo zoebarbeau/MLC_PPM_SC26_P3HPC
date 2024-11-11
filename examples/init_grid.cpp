@@ -7,6 +7,13 @@
 
 #include <Kokkos_Core.hpp>
 
+#include <complex>
+#include "fftx3.hpp"
+// #include "interface.hpp"
+// #include "/home/h82/Documents/Bluestone/SPIRAL/FFTX/fftx/examples/rconv/rconvObj.hpp"
+#include "rconvObj.hpp"
+//#include "mddftObj.hpp"
+
 #include <mpi.h>
 
 #include <array>
@@ -170,6 +177,22 @@ int main( int argc, char* argv[] )
     //vorticity
     //
     double hp = std::atof( argv[5] );
+
+    // Convolution
+    double *input = new double[10*10*10];
+    double *output = new double[10*10*10];
+    std::complex<double> *symbol = new std::complex<double>[10*10*10];
+    //Vector of void pointers
+    std::vector<void*> args{output, input, symbol};
+    std::vector<int> sizes{10,10,10};
+
+    //rconv class
+    RCONVProblem conv{args, sizes, "rconv"};
+    // For Pruned change class name RCONV, "rconv" and add the correct obj file at the top
+
+    // Run the transform
+    conv.transform();
+
 
     // run the problem.
     initgrid( cell_size, ppc, halo_size,

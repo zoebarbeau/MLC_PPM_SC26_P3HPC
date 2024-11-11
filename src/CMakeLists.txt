@@ -1,14 +1,23 @@
 set(HEADERS
-  ExaMPM_BoundaryConditions.hpp
-  ExaMPM_DenseLinearAlgebra.hpp
-  ExaMPM_Mesh.hpp
-  ExaMPM_ParticleInit.hpp
-  ExaMPM_ProblemManager.hpp
-  ExaMPM_Solver.hpp
-  ExaMPM_TimeIntegrator.hpp
-  ExaMPM_TimeStepControl.hpp
-  ExaMPM_Types.hpp
-  ExaMPM_VelocityInterpolation.hpp
+ExaMPM_BoundaryConditions.hpp
+ExaMPM_Convolution.hpp
+ExaMPM_DenseLinearAlgebra.hpp
+ExaMPM_DriverGrid.hpp
+ExaMPM_GreensFunction.hpp
+ExaMPM_GridManager.hpp
+ExaMPM_LocalCorrection.hpp
+ExaMPM_Mesh.hpp
+ExaMPM_MLC_Interp.hpp
+ExaMPM_ParticleInit.hpp
+ExaMPM_ProblemManager2.hpp
+ExaMPM_Remap.hpp
+ExaMPM_Solver2.hpp
+#ExaMPM_TimeIntegrator.hpp
+#ExaMPM_TimeStepControl.hpp
+ExaMPM_Types.hpp
+ExaMPM_VelocityInterpolation.hpp
+ExaMPM_VInterp.hpp
+ExaMPM_VInterpolation.hpp
   )
 
 set(SOURCES
