@@ -21,6 +21,7 @@
 #include <cmath>
 #include "interface.hpp"
 #include "mdprdftObj.hpp"
+#include "rconvObj.hpp"
 namespace ExaMPM
 {
 namespace Convolution
@@ -61,53 +62,58 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
   Kokkos::View<double*> F1D("Fvector", extent*extent*extent);
 
   // Copy data from 3D to 1D using a parallel loop
-    Kokkos::parallel_for("Copy 3D to 1D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}), 
-        KOKKOS_LAMBDA(const int i, const int j, const int k) {
+    // Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}), 
+    //     KOKKOS_LAMBDA(const int i, const int j, const int k) {
+    //         int index = i * extent * extent + j * extent + k;
+    //         F1D(index) = F(i, j, k,0);
+    //        // Kokkos::printf("F1D = %f, index = %d \n", F1D(index), index);
+    //     });
+   Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {extent, extent, extent, 1}), 
+        KOKKOS_LAMBDA(const int i, const int j, const int k, const int m) {
             int index = i * extent * extent + j * extent + k;
             F1D(index) = F(i, j, k,0);
-           // Kokkos::printf("F1D = %f, index = %d \n", F1D(index), index);
+            //Kokkos::printf("F1D = %f, index = %d \n", F1D(index), index);
         });
-  //  Kokkos::parallel_for("Copy 3D to 1D", Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {extent, extent, extent, 3}), 
-  //       KOKKOS_LAMBDA(const int i, const int j, const int k, const int m) {
-  //           int index = i * extent * extent + j * extent + k;
-  //           F1D(index) = F(i, j, k,0);
-  //       });
-
+  double *F1D_vec = F1D.data();
   // Green's function
   //Kokkos::View<double*> GreensFunc_K("Fvector", (extent-2)*(extent-2)*(extent-2));
-  double *GreensFunc_K = new double[(extent-2)*(extent-2)*(extent-2)];
-
+  double *GreensFunc_K = new double[(extent-1)*(extent-1)*(extent-1)];
+  double scal_GreensFunc;
+  
+//extent = no. cells
+// actual no. of points  = extent + 1
   //iterate over D
-     for(int i = 0; i < extent; i++){
-       for(int j = 0; j < extent; j++){
-         for(int k = 0; k < extent; k++){
+     for(int i = 0; i < extent+1; i++){
+       for(int j = 0; j < extent+1; j++){
+         for(int k = 0; k < extent+1; k++){
             
             //xp
             double xg[3] = { i*h - center, j*h - center, k*h - center };
             
             // Iterate over D0
-           for(int i0 = 0; i0 < extent-2; i0++){
-              for(int j0 = 0; j0 < extent-2; j0++){
-                for(int k0 = 0; k0 < extent-2; k0++){
+           //for(int kk = 0; kk<9; kk++){
+              for(int i0 = 1; i0 < extent; i0++){
+                for(int j0 = 1; j0 < extent; j0++){
+                  for(int k0 = 1; k0 < extent; k0++){
                   
                   // xq
                   double xg0[3] = { i0*h - center, j0*h - center, k0*h - center };
                 
                   double K[9];
-
-                  // Computing the K matrix from the Almgren paper
-                  int index_K = i0 * (extent-2) * (extent-2) + j0 * (extent-2) + k0;
-                  //GreensFunc_K[index_K] = GreensFunction::CalculateK(xg, xg0, K);
-                  GreensFunction::CalculateK(xg, xg0, K);
-                  for(int kk = 0; kk<9; kk++){
-                    GreensFunc_K[index_K] = 1.0; //K[kk];
-                    //printf("GreensFunc_K[%d] = %f \n", index_K, GreensFunc_K[index_K]);
-                  }
                   
+                  // Computing the K matrix from the Almgren paper
+                  int index_K = (i0-1) * (extent-1) * (extent-1) + (j0-1) * (extent-1) + (k0-1);
+                  //GreensFunction::CalculateK(xg, xg0, K);
+                  GreensFunction::Calculate_scalarK(xg, xg0, &scal_GreensFunc);
+                  // for(int kk = 0; kk<9; kk++){
+                    GreensFunc_K[index_K] = scal_GreensFunc; //1.0; //K[kk];
+                    printf("GreensFunc_K[%d] = %f \n", index_K, GreensFunc_K[index_K]);
+                  // }
+                  }  
                   
                 }
               }
-           }
+           //}
 
            
          }
@@ -125,20 +131,30 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
     for(int i0 = 0; i0 < (extent-2)*(extent-2)*(extent-2); i0++){      
         std::cout << " " << symbol[i0] << std::endl;        
     }
-
     
+    // Convolution F*G
+    double *output = new double[extent*extent*extent];
+  
+    // //Vector of void pointers
+    args.clear();
+    args.push_back(output);
+    args.push_back(F1D_vec);
+    args.push_back(symbol);
 
-  // Convolution
-    // Computing the Symbol = FFT(F1D)
-    //std::complex<double> *symbol = new std::complex<double>[10*10*10];
-    //MDDFT class
-    //MDDFTProblem r2cdft{args, sizes, "mddft"};
-    // double *input = new double[extent*extent*extent];
-    // double *phi = new double[extent*extent*extent];
-    // std::complex<double> *symbol = new std::complex<double>[10*10*10];
-    //Vector of void pointers
-    // std::vector<void*> args{output, F1D.data(), symbol};
-    // std::vector<int> sizes{10,10,10};
+    sizes.clear();
+    sizes.push_back(extent);
+    sizes.push_back(extent);
+    sizes.push_back(extent);
+
+    //rconv class
+    RCONVProblem conv{args, sizes, "rconv"};
+
+    // // Run the transform
+    conv.transform();
+
+    for(int i0 = 0; i0 < (extent)*(extent)*(extent); i0++){      
+        std::cout << " " << output[i0] << std::endl;        
+    }
 
 }
 }
