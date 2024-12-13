@@ -156,7 +156,7 @@ void Multigrid<T>::average(BoxData<T>& a_bdC,
   HDF5Handler h5;
   BoxData<T> temp(a_bx);
   a_bd.copyTo(temp);
-  BoxData tempNew;
+  BoxData<T> tempNew;
   Box bxPre = a_bx;
   for (int dir = 0;dir < DIM; dir++)
     {

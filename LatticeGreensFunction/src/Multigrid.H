@@ -2,8 +2,8 @@
 #define _MULTIGRID_H_
 #include "Proto.H"
 using namespace Proto;
-PROTO_KERNEL_START
 template<typename T>
+PROTO_KERNEL_START
 void f_greensfcn_F(
                    Point a_pt,
                    Var<T>& a_phi,

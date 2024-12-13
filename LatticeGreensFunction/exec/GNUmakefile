@@ -15,10 +15,10 @@ CXXOPTFLAGS+=-DmemoryFootPrint
 CXXOPTFLAGS+=-DPR_OPS
 CXXOPTFLAGS+=-DPR_CFD
 CXXOPTFLAGS+= -DPR_HDF5=TRUE
-#HDF5_LIB=/usr/local/lib
-#HDF5_INC=/usr/local/include
-HDF5_LIB=/usr/lib
-HDF5_INC=/usr/include
+HDF5_LIB=/usr/local/lib
+HDF5_INC=/usr/local/include
+#HDF5_LIB=/usr/lib
+#HDF5_INC=/usr/include
 #CXXOPTFLAGS+= -DPR_MPI=TRUE
 CXXOPTFLAGS+= -DPR_STACK_ALLOC=4294967296
 TARGET:=multigrid.exe
@@ -33,9 +33,9 @@ DEPENDS=$(patsubst %.d,d/%.d, $(NODIRDEP))
 
 VPATH=o. ../src  ../../_common
 
-CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/amr -I$(PROTO)/include/mmb -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common
+CPPFLAGS:=-DDIM=$(DIM) -I$(PROTO)/include -I$(PROTO)/include/base -I$(PROTO)/include/ops -I$(PROTO)/include/utils -I$(PROTO)/tests -I. -I../src -I../../_common     
 
-CXXFLAGS:= $(CXXOPTFLAGS) -std=c++20
+CXXFLAGS:= $(CXXOPTFLAGS) -std=c++14
 
 LIBS += $(LAPACK_LIB)
 

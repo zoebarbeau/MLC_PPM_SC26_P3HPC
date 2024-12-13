@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     
     // SETUP
 #ifdef PR_HDF5
-    HDF5Handler h5;
+    // HDF5Handler h5;
 #endif
     int domainSize;
     int numIter = 20;
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     {
       // using multigrid as a solver.
       // define solver.
-      Multigrid mg(LStencil,diagCoef,diamStencil);
+      Multigrid<double> mg(LStencil,diagCoef,diamStencil);
       phi.setVal(0.);
       rhs.setVal(0.);
       rhs(Point::Zeros()) = 1.0;
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
       Stencil<double> LStencilSmooth;
       int diamStencilSmooth;
       LaplaceStencils(LStencilSmooth,diagCoefSmooth,diamStencilSmooth,1);
-      Multigrid mg(LStencilSmooth,diagCoefSmooth,diamStencilSmooth);
+      Multigrid<double> mg(LStencilSmooth,diagCoefSmooth,diamStencilSmooth);
       Box domainBoxValid(Point::Ones(-domainSize/2+1),Point::Ones(domainSize/2-1));
       Box domainBox = domainBoxValid.grow(Point::Ones(diamStencil));
       cout << "domain = " << domainBox
@@ -146,20 +146,27 @@ int main(int argc, char** argv)
           if (resnorm < 1.e-14*resnorm0) break;
         }
     }
-   
+  BoxData<double> phiTrimmed(Box(Point::Ones(-domainSize/4+1),Point::Ones(domainSize/4)));
+  phi.copyTo(phiTrimmed);
+  Box bx = phiTrimmed.box();
+  std::ofstream ofs ("phiTrimmed", std::ofstream::out);
+  for (auto bit : bx)
+    {
+      ofs << bit << " , " << std::scientific << std::setprecision(10) << phiTrimmed(bit) << endl;
+    }
   BoxData<double> phiExact = forall_p<double>(f_greensfcn,phi.box(),h,Point::Zeros());
-  h5.writePatch({"data"},1.0,phi,"GreensFunctionFinal"+to_string(domainSize),0);
-  h5.writePatch({"data"},1.0,phiExact,"GreensFunctionExact"+to_string(domainSize),0);
+  //h5.writePatch({"data"},1.0,phi,"GreensFunctionFinal"+to_string(domainSize),0);
+  //h5.writePatch({"data"},1.0,phiExact,"GreensFunctionExact"+to_string(domainSize),0);
   phi -= phiExact;
-  h5.writePatch({"data"},1.0,phi,"GreensFunctionFinalError"+to_string(domainSize),0);
+  //h5.writePatch({"data"},1.0,phi,"GreensFunctionFinalError"+to_string(domainSize),0);
   BoxData<double> LOfPhiE = LStencil(phiExact,-1.0);
   LOfPhiE += rhs;
-  h5.writePatch({"data"},1.0,LOfPhiE,"TruncationError"+to_string(domainSize),0);
+  //h5.writePatch({"data"},1.0,LOfPhiE,"TruncationError"+to_string(domainSize),0);
 
    ofstream filestream;
-   ofstream filestreamErr;
-   filestreamErr.open("phiErr"+to_string(domainSize)+".curve");
-   filestream.open("GScaled"+to_string(domainSize)+".curve");
+   ofstream filestreamL;
+   filestreamL.open("LOfPhiE"+to_string(domainSize)+".curve");
+   filestream.open("PhiErrScaled"+to_string(domainSize)+".curve");
    for (auto bit : domainBoxValid)
      {
        if ((bit[0]%(domainSize/16) == 0) && (bit[1]%(domainSize/16) == 0)
@@ -177,17 +184,19 @@ int main(int argc, char** argv)
              }
            l2dist = sqrt(l2dist);
            if (dist > 2)
-             {
-               filestreamErr << l2dist << " " << max(abs(phi(bit)),1.e-20) << endl;
+             {  
                filestream << l2dist << std::scientific 
                           << " "
-                          << max(abs(phi(bit)*l2dist*M_PI*4.0 - 1.0), 1.e-20)
+                          << max(abs(phi(bit)*l2dist*M_PI*4.0 + 1.0), 1.e-20);
+                 filestreamL << l2dist << std::scientific 
+                          << " "
+                            << max(abs(LOfPhiE(bit)), 1.e-20)
              << endl;
              }
          }
      }
    filestream.close();
-   filestreamErr.close();
+   filestreamL.close();
   PR_TIMER_REPORT(); 
 #ifdef PR_MPI
   MPI_Finalize();
