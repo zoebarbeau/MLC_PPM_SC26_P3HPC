@@ -3,8 +3,8 @@ DEPXX=clang++
 CXX=clang++
 #CXX=mpicxx
 DIM=3
-USE_HDF5=TRUE
-PROTO=../../../proto
+# USE_HDF5=TRUE
+PROTO=/home/h82/Documents/Bluestone/P3M/proto
 
 LAPACK_LIB=-lblas -llapack
 #CXXOPTFLAGS=-g
@@ -14,7 +14,7 @@ CXXOPTFLAGS+=-DmemoryFootPrint
 #CXXOPTFLAGS+=-DPR_MMB
 CXXOPTFLAGS+=-DPR_OPS
 CXXOPTFLAGS+=-DPR_CFD
-CXXOPTFLAGS+= -DPR_HDF5=TRUE
+# CXXOPTFLAGS+= -DPR_HDF5=TRUE
 HDF5_LIB=/usr/local/lib
 HDF5_INC=/usr/local/include
 #HDF5_LIB=/usr/lib
@@ -39,15 +39,15 @@ CXXFLAGS:= $(CXXOPTFLAGS) -std=c++14
 
 LIBS += $(LAPACK_LIB)
 
-ifdef HDF5_LIB
-LIBS+= -L$(HDF5_LIB) -lhdf5 -lz
-CPPFLAGS+= -I$(HDF5_INC)
-endif
+# ifdef HDF5_LIB
+# LIBS+= -L$(HDF5_LIB) -lhdf5 -lz
+# CPPFLAGS+= -I$(HDF5_INC)
+# endif
 
-ifdef OLCF_HDF5_ROOT
-LIBS+= -L$(OLCF_HDF5_ROOT)/lib -lhdf5 -lz
-CPPFLAGS+= -I$(OLCF_HDF5_ROOT)/include
-endif
+# ifdef OLCF_HDF5_ROOT
+# LIBS+= -L$(OLCF_HDF5_ROOT)/lib -lhdf5 -lz
+# CPPFLAGS+= -I$(OLCF_HDF5_ROOT)/include
+# endif
 
 ifdef FFTW3_DIR
 LIBS+= -L$(FFTW3_DIR)/lib -lfftw3
@@ -106,8 +106,8 @@ vars:
 clean:
 	rm -rf d o *.o *.exe *.d ../../_common/*.o ../src/*.o ../../common/*.d ../src/*.d
 
-dataclean:
-	rm -rf *.hdf5 *.vtk *.table pout*
+# dataclean:
+# 	rm -rf *.hdf5 *.vtk *.table pout*
 
 
 

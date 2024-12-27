@@ -68,7 +68,7 @@ void CalculateK(const double xp[3],const double xq[3], double K[9])
             }
             else{
                K[d0*3 + d1] = K_M[d0][d1] * 1.0/(4.0*Kokkos::numbers::pi*pow(r, 3.0) );
-               printf("K[%d] = %f \n", d0*3+d1, K[d0*3+d1]);
+               // printf("K[%d] = %f \n", d0*3+d1, K[d0*3+d1]);
             }
 	          
         }
@@ -84,7 +84,7 @@ void Calculate_scalarK(const double xp[3],const double xq[3], double* scal_K)
    }
    else{
       *scal_K = 1.0/(4.0*Kokkos::numbers::pi*pow(r, 3.0) );
-      printf("K = %f \n", *scal_K);
+      // printf("K = %f \n", *scal_K);
    }
 }
 

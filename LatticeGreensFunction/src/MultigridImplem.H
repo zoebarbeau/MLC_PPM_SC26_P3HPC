@@ -1,4 +1,4 @@
-#include "Proto_HDF5.H"
+// #include "Proto_HDF5.H"
 template<typename T>
 Multigrid<T>::Multigrid(
                      Stencil<T> a_sten,
@@ -153,7 +153,7 @@ void Multigrid<T>::average(BoxData<T>& a_bdC,
                         Box a_bx)
 {
   PR_TIMERS("Multigrid<T>::average");
-  HDF5Handler h5;
+  // HDF5Handler h5;
   BoxData<T> temp(a_bx);
   a_bd.copyTo(temp);
   BoxData<T> tempNew;
@@ -181,7 +181,7 @@ void Multigrid<T>::interpolate(
                             const BoxData<T>& a_deltaC)
 {
   PR_TIMERS("Multigrid<T>::interpolate");
-  HDF5Handler h5;
+  // HDF5Handler h5;
   Box bxNext = a_deltaC.box();
   BoxData<T> temp,tempNew;
   temp.define(bxNext);
