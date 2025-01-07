@@ -1,7 +1,10 @@
-add_executable( DamBreak dam_break.cpp )
-target_link_libraries( DamBreak PRIVATE exampm)
+add_executable( initGrid init_grid.cpp )
+target_link_libraries( initGrid PRIVATE exampm)
 
-add_executable( FreeFall free_fall.cpp )
-target_link_libraries( FreeFall PRIVATE exampm)
+add_executable( Nbody Nbody.cpp )
+target_link_libraries( Nbody PRIVATE exampm)
 
-install(TARGETS DamBreak FreeFall DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable( NbodyGrid NbodyGrid.cpp )
+target_link_libraries( NbodyGrid PRIVATE exampm)
+
+install(TARGETS initGrid DESTINATION ${CMAKE_INSTALL_BINDIR})

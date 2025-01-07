@@ -3,10 +3,6 @@ set(HEADERS
   ExaMPM_DenseLinearAlgebra.hpp
   ExaMPM_Mesh.hpp
   ExaMPM_ParticleInit.hpp
-  ExaMPM_ProblemManager.hpp
-  ExaMPM_Solver.hpp
-  ExaMPM_TimeIntegrator.hpp
-  ExaMPM_TimeStepControl.hpp
   ExaMPM_Types.hpp
   ExaMPM_VelocityInterpolation.hpp
   )
