@@ -70,6 +70,7 @@ class Mesh
         std::array<double, 3> global_high_corner = { global_bounding_box[3],
                                                      global_bounding_box[4],
                                                      global_bounding_box[5] };
+
         for ( int d = 0; d < 3; ++d )
         {
             _min_domain_global_node_index[d] = 0;
@@ -78,7 +79,7 @@ class Mesh
 
         // For dimensions that are not periodic we pad by the minimum halo
         // cell width to allow for projections outside of the domain.
-        for ( int d = 0; d < 3; ++d )
+/*        for ( int d = 0; d < 3; ++d )
         {
             if ( !periodic[d] )
             {
@@ -89,7 +90,7 @@ class Mesh
                 _max_domain_global_node_index[d] += minimum_halo_cell_width;
             }
         }
-
+*/
         // Create the global mesh.
         auto global_mesh = Cabana::Grid::createUniformGlobalMesh(
             global_low_corner, global_high_corner, num_cell );
