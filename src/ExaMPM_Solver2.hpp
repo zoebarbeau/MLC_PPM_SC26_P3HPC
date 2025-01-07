@@ -20,6 +20,7 @@
 #include <ExaMPM_LocalCorrection.hpp>
 #include <ExaMPM_GridManager.hpp>
 #include <ExaMPM_Remap.hpp>
+#include <ExaMPM_Convolution.hpp>
 #include <memory>
 #include <string>
 
@@ -65,6 +66,7 @@ class Solver : public SolverBase
         _mesh = std::make_shared<Mesh<MemorySpace>>(
             global_bounding_box, global_num_cell, periodic, partitioner,
             halo_cell_width, _halo_min, comm );
+
 	_pmesh = std::make_shared<Mesh<MemorySpace>>(
             global_bounding_box, pgrid_num_cell, periodic, partitioner,
             halo_cell_width, _halo_min, comm );
@@ -88,7 +90,6 @@ class Solver : public SolverBase
 
         double pgrid_delta[3] = {hp,hp,hp};
 
-	std::cout << "hp " << hp << " cell size " << cell_size << " extent " << extent << std::endl;
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
         // 
 	//Real Particle Lists
@@ -101,6 +102,7 @@ class Solver : public SolverBase
 	//7x7 W44 stencil linked list
 	double third = 1.0 / 3.0;
 	_W44_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(), pgrid_delta, grid_min, grid_max, 3*hp, third);
+
 	//Define the number of points contained in D0 and D
 	num_D0 = (global_num_cell[0] + 1 - 2)*(global_num_cell[1] + 1 - 2)*(global_num_cell[2] + 1 - 2);
         num_D  = (global_num_cell[0]+1)*(global_num_cell[1]+1)*(global_num_cell[2]+1);
@@ -144,6 +146,10 @@ class Solver : public SolverBase
        std::cout << "interpolation " << std::endl; 
 //       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp );  
        std::cout << " Nbody " << std::endl;  
+
+       //    Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
+    //   Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
+
        _step += 1;
        outputParticles();
     }
@@ -156,7 +162,7 @@ class Solver : public SolverBase
 #ifdef Cabana_ENABLE_HDF5
         Cabana::Experimental::HDF5ParticleOutput::HDF5Config h5_config;
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
-            h5_config, "remap2", _pmesh->localGrid()->globalGrid().comm(),
+            h5_config, "remap", _pmesh->localGrid()->globalGrid().comm(),
             _step, _time, _pm->numParticle(),
             _pm->get( Location::Particle(), Field::Position() ),
             _pm->get( Location::Particle(), Field::Vorticity() ) );

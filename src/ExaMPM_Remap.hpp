@@ -39,8 +39,12 @@ struct RemapInitFunc
 	                       pow( vort[1] , 2.0) +
 		               pow( vort[2] , 2.0), 0.5);
 
+<<<<<<< HEAD
 
        if ( vort_magn > pow(10,-6.0) ) 
+=======
+       if ( vort_magn > pow(10,-4.0) ) 
+>>>>>>> origin/FFTX_GreensFunction
        {
    //        std::cout << " vorticity magn " << std::endl;
 	   for(int d = 0; d < 3; d++)    
@@ -48,10 +52,15 @@ struct RemapInitFunc
               Cabana::get<0>( p, d ) = vort[d]; 
 	      Cabana::get<1>( p, d ) = 0.0;
               Cabana::get<2>( p, d ) = x[d];
+<<<<<<< HEAD
 	      Cabana::get<3>( p, d ) = 0.0;
            }
 
 	   Kokkos::printf( "vorticity %f  x %f y %f z %f \n", vort[0], Cabana::get<2>(p,0), Cabana::get<2>(p,1), Cabana::get<2>(p,2) );
+=======
+           }
+
+>>>>>>> origin/FFTX_GreensFunction
 	   return true;
 
        }
@@ -60,10 +69,17 @@ struct RemapInitFunc
 	      
    }
 };
+<<<<<<< HEAD
 KOKKOS_INLINE_FUNCTION void W44_Weight(double W44[3], double x_g[3], double x_p[3], double hg, double hp)
 {
     int n = 10;	
     double a[10], b[10], g[10];
+=======
+void W44_Weight(double W44[3], double x_g[3], double x_p[3], double hg, double hp)
+{
+    int n = 10;	
+    double a[n], b[n], g[n];
+>>>>>>> origin/FFTX_GreensFunction
     double ratio = pow(hp/hg, 3.0);
     double d[3];
     int DIM = 3;
@@ -92,7 +108,10 @@ KOKKOS_INLINE_FUNCTION void W44_Weight(double W44[3], double x_g[3], double x_p[
            //difference between particle location and stencil location
            d[j] = ( std::abs((x_g[j] - x_p[j]) / hg ) );
 
+<<<<<<< HEAD
 	 //  Kokkos::printf( " dj %f \n", d[j]);
+=======
+>>>>>>> origin/FFTX_GreensFunction
            W44[j] = 0.0;
 
            //Generate W44 based on distance d
@@ -137,6 +156,7 @@ void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
    auto positions  = pm.get(Location::Particle(), Field::Position());
    double ratio = pow(h/hp, 3.0);
    Kokkos::deep_copy(vorticity_g, 0.0);
+
    std::cout << " ratio " << ratio << std::endl;
 
    //Iterate over D0 
@@ -156,8 +176,7 @@ void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
             W44_list.getStencilCells( W44_list.getParticleBin( p ), imin,imax, jmin,
                                       jmax, kmin, kmax ); 
 
-         //   Kokkos::printf("imin %d imax %d jmin %d jmax %d kmin %d kmax %d numParticle %d \n ", imin, imax, jmin, jmax, kmin, kmax, p);
-         //   Kokkos::printf(" xp %f yp %f zp %f \n", xp[0], xp[1], xp[2]);
+
             //Iterate over cell stencil of the linked list = Ci
             for( int i = imin; i < imax; i++)
                 for( int j = jmin; j < jmax; j ++)
@@ -180,6 +199,7 @@ void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
 				  Kokkos::printf("i %d j %d k %d numParticle %d \n ", i, j, k, p);
                                   Kokkos::printf(" xp %f yp %f zp %f \n", xp[0], xp[1], xp[2]);
                           }
+
                      }
 
 
@@ -191,6 +211,8 @@ void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
           
 
        std::cout << "resized remap" << std::endl;
+          
+
 }
 
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>

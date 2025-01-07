@@ -7,6 +7,16 @@
 
 #include <Kokkos_Core.hpp>
 
+<<<<<<< HEAD
+=======
+#include <complex>
+#include "fftx3.hpp"
+// #include "interface.hpp"
+// #include "/home/h82/Documents/Bluestone/SPIRAL/FFTX/fftx/examples/rconv/rconvObj.hpp"
+// #include "rconvObj.hpp"
+//#include "mddftObj.hpp"
+
+>>>>>>> origin/FFTX_GreensFunction
 #include <mpi.h>
 
 #include <array>
@@ -35,7 +45,11 @@ struct ParticleInitFunc
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
         q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
+<<<<<<< HEAD
        if ( (q <= 2) ) //0.65) ) //&& (r >= 0.35) )
+=======
+       if ( (q <= 3) ) 
+>>>>>>> origin/FFTX_GreensFunction
        {  
 
 	//Stuff for a Vortex Ring	
@@ -113,8 +127,6 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     MPI_Comm_size( MPI_COMM_WORLD, &comm_size );
     std::array<int, 3> ranks_per_dim = { 1, 1, 1 };
     Cabana::Grid::ManualBlockPartitioner<3> partitioner( ranks_per_dim );
- 
-    std::cout << " blick partitioner " << std::endl;
 
     // Free slip conditions (alternative: NO_SLIP)
     ExaMPM::BoundaryCondition bc;
@@ -124,10 +136,6 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     bc.boundary[3] = ExaMPM::BoundaryType::NO_SLIP;
     bc.boundary[4] = ExaMPM::BoundaryType::NO_SLIP;
     bc.boundary[5] = ExaMPM::BoundaryType::NO_SLIP;
-
-
-    std::cout << " hp " << hp << " center " << center<< std::endl;
-    std::cout << "bc " << std::endl;
     double t_final = 1.0;
     int write_freq = 1;
     // Solve the problem.
@@ -152,6 +160,7 @@ int main( int argc, char* argv[] )
         std::cerr << "\nwhere cell_size       edge length of a computational "
                      "cell (domain is unit cube)\n";
         std::cerr
+<<<<<<< HEAD
             << "      parts_per_cell  particles per cell in each direction\n";
         std::cerr << "      halo_cells      number of halo cells\n";
         std::cerr << "      dt              time step size\n";
@@ -183,7 +192,22 @@ int main( int argc, char* argv[] )
     //
     double hp = std::atof( argv[5] );
 
-    std::cout << " initialize problem " << std::endl;
+    // // Convolution
+    // double *input = new double[10*10*10];
+    // double *output = new double[10*10*10];
+    // std::complex<double> *symbol = new std::complex<double>[10*10*10];
+    // //Vector of void pointers
+    // std::vector<void*> args{output, input, symbol};
+    // std::vector<int> sizes{10,10,10};
+
+    // //rconv class
+    // RCONVProblem conv{args, sizes, "rconv"};
+    // // For Pruned change class name RCONV, "rconv" and add the correct obj file at the top
+
+    // // Run the transform
+    // conv.transform();
+
+
     // run the problem.
     initgrid( cell_size, ppc, halo_size,
               exec_space, hp );

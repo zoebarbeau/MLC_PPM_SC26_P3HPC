@@ -36,7 +36,7 @@ void test_greens( )
        double xp[3]    = { 0.5, 0.5, 0.5};
        double K[3];
        //Calculate Green's Function
-       GreensFunction::CalculateK(xp, xq, vortp, K);
+       GreensFunction::Calculate_qK(xp, xq, vortp, K);
 
        std::cout << " K = " << K[0] << "  " << K[1] << " " << K[2] << std::endl;
 
@@ -499,9 +499,6 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                jmax, kmin, kmax );
 
 
-/*	    std::cout << " ii " << ii << " jj " << jj << " kk " << kk << std::endl;
-	    std::cout << "imin = " << imin << " jmin = " << jmin << " kmin = " << kmin << std::endl;
-	    std::cout << "imax = " << imax << " jmax = " << jmax << " kmax = " << kmax << std::endl; */
 
    //Reset Ci to 0
             for( int ci = imin; ci < imax; ci++)
@@ -542,22 +539,11 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                    double K[3];
 
                                    //Calculate Green's Function
-                                   GreensFunction::CalculateK(xg, xp, vortp, K);
+                                   GreensFunction::Calculate_qK(xg, xp, vortp, K);
 
                                    //Correct Velocity
                                    for(int d = 0; d < 3; d++)
                                         velocity_g(ci, cj, ck, d) += K[d];
-
-/*		                   if( std::abs(velocity_g(ci,cj,ck,0) ) > 0 || std::abs( velocity_g(ci,cj,ck,1) ) > 0 || std::abs( velocity_g(ci,cj,ck,2) ) > 0 )
-                                            {
-
-						    std::cout << " ci = " << ci << " cj = " << cj << " ck = " << ck << std::endl;
-						    std::cout << " ii = " << ci << " jj = " << jj << " kk = " << kk << std::endl;
-						    std::cout << velocity_g(ci,cj,ck,0) << " " << velocity_g(ci,cj,ck,1)
-							      << " " << velocity_g(ci,cj,ck,2) << std::endl;
-                                            }   */
-
-
 
                                   }
                           }
@@ -579,51 +565,15 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                          //Set F
    		         for(int d = 0; d < 3; d++)
 		            F(c0i,c0j,c0k,d) += F_temp[d];
-                
-                     /*    if( std::abs(F_temp[0]) > 0 || std::abs(F_temp[1] ) > 0 || std::abs( F_temp[2] ) > 0 ){
-                            std::cout << " F = " << F(c0i,c0j,c0k,0) << " " << F(c0i,c0j,c0k,1) << " " << F(c0i,c0j,c0k,2) << std::endl;
-                            std::cout << " F2 = " << F_temp[0] << " " << F_temp[1] << " " << F_temp[2] << std::endl;
-			    std::cout << " x " << c0i*h - center << " y " << c0j*h - center << " z " << c0k*h - center << std::endl;
-			    std::cout << " velocity " << velocity_g(c0i,c0j,c0k,0) << " " << velocity_g(c0i,c0j,c0k,1)
-				      << " " << velocity_g(c0i,c0j,c0k,2) << std::endl; */
-                      //   } 
+
 			 
 		      }
-		//
-		//
-
 
 
 
 	});
 
-/*       int num_nonzero = 0;
-       for( int i = 0; i < extent; i++)
-	  for( int j = 0; j < extent; j++)
-	     for( int k = 0; k < extent; k++)
-	     {
-
-		if( std::abs(F(i,j,k,0) ) > 0 || std::abs( F(i,j,k,1) ) > 0 || std::abs( F(i,j,k,2) ) > 0 )
-		{
-
-		    num_nonzero++;
-                
-		
-
-		double xgg[3] = {i*h - center, j*h - center, k*h - center };     
-                std::cout << "u = " << velocity_g(i,j,k,0) << " v =  " << velocity_g(i,j,k,1) << " w = " << velocity_g(i,j,k,2) << std::endl;
-		std::cout << "x = " << xgg[0] << " y = " << xgg[1] << " z = " << xgg[2] << std::endl;
-                std::cout << "i " << i << " j " << j << " k " << k << std::endl; 
-                std::cout << " F = " << F(i,j,k,0) << " " << F(i,j,k,1) << " " << F(i,j,k,2) << std::endl;  
-                }
-
-		Fx(i,j,k,0) = F(i,j,k,0);
-
-	     }
-*/
              pm.save_F( "Initial_F",1,0);
-//	     std::cout << " number nonzero " << num_nonzero << std::endl;
-//             std::cout << "deposition " << std::endl;
 }
 
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
@@ -690,16 +640,11 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                 double xgg[3] = {i*h - center, j*h - center, k*h - center };
 		double F_temp[3] = {0.0, 0.0, 0.0};
                 MLC_Interp::L27(velocity_g,i,j,k,g,F_temp);
-/* std::cout << " F temp " << F_temp[0] << " " << F_temp[1] << " " << F_temp[2] << std::endl;
- std::cout << "F1 " << F(i,j,k,0) << " F2 " << F(i,j,k,1) << " F3 " << F(i,j,k,2) << std::endl;
- std::cout << "u = " << velocity_g(i,j,k,0) << " v =  " << velocity_g(i,j,k,1) << " w = " << velocity_g(i,j,k,2) << std::endl;
- std::cout << "x = " << xgg[0] << " y = " << xgg[1] << " z = " << xgg[2] << std::endl; */
                velx(i,j,k,0) = velocity_g(i,j,k,0);
 	       Fx(i,j,k,0) = F_temp[0];   
 
              }
 
-             std::cout << "Test COnvolution " << std::endl;
              pm.save_F( "Laplacian_V",1,0);
 
 }
@@ -725,10 +670,10 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    auto Fx         = pm.get(Location::Node(), Field::Fx() );
    auto advect_vort = pm.get(Location::Particle(), Field::Vorticity_Advect() );
    Kokkos::deep_copy( velx, 0.0);
-   //Kokkos::deep_copy( velocity_g, 0.0);
+   Kokkos::deep_copy( velocity_g, 0.0);
    Kokkos::deep_copy( velocity_corr, 0.0);
    Kokkos::deep_copy(velocity_g, 0.0);
-//   Kokkos::deep_copy( advect_vort, 0.0);
+   Kokkos::deep_copy( advect_vort, 0.0);
    //Get relevant interpolation quantities 
    MLC_Interp::GridData<3> g( h, center);
 
@@ -759,7 +704,6 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
             Ci_list.getStencilCells( Ci_list.getParticleBin( i ), imin,imax, jmin,
                                jmax, kmin, kmax ); 
 
-	    //Kokkos::printf("get stencil cells");
 	     auto offset = Pi_list.binOffset(ii,jj,kk);
              auto size   = Pi_list.binSize(ii,jj,kk);
 
@@ -777,17 +721,9 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                        for(int sj = jj-1; sj <= jj+1; sj++)
                            for( int sk = kk-1; sk <= kk+1; sk++)
                            {
-                             //     std::cout << "precorrection " << velocity_g(si,sj,sk,0)
-                             //               << " " << velocity_g(si,sj,sk,1)
-                             //               << " " << velocity_g(si,sj,sk,2) << std::endl;
-			     //
-	//			   Kokkos::printf("si %d", si);
-	//			   Kokkos::printf("sj %d", sj);
-	//			   Kokkos::printf("sk %d", sk);
 
            			  for(int d = 0; d < 3; d++)
                                      velocity_corr(si,sj,sk,d) = velocity_g(si,sj,sk,d);
-                              //   Kokkos::printf("velocity correlation");
 
                            }
 
@@ -833,7 +769,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                          double K[3];
 
 					 //Calculate Green's Function
-                                         GreensFunction::CalculateK(xg, xp, vortp, K);
+                                         GreensFunction::Calculate_qK(xg, xp, vortp, K);
+
 					 //Correct Velocity
                                          for(int d = 0; d < 3; d++)
                                      	    velocity_corr(si, sj, sk, d) -= K[d]; 
@@ -984,9 +921,10 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 	}
 
         //Evaluate Green's Function with number
-        GreensFunction::CalculateK(x, xq, vort, K);
-	GreensFunction::CalculateK(xp_minus, xq, vort, K_minus);
-	GreensFunction::CalculateK(xp_plus, xq, vort, K_plus);
+        GreensFunction::Calculate_qK(x, xq, vort, K);
+	GreensFunction::Calculate_qK(xp_minus, xq, vort, K_minus);
+	GreensFunction::Calculate_qK(xp_plus, xq, vort, K_plus);
+        double K[3];
 
 
 	//Correct Velocity at P with Local Neighbor Interaction at Q

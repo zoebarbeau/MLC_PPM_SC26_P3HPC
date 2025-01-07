@@ -27,7 +27,7 @@ namespace GreensFunction
 //---------------------------------------------------------------------------//
 // Particle-to-grid.
 //
-KOKKOS_INLINE_FUNCTION void CalculateK(const double xp[3],const double xq[3], const double up[3], double K[3])
+void Calculate_qK(const double xp[3],const double xq[3], const double up[3], double K[3])
 {
    double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);
    double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
@@ -52,6 +52,42 @@ KOKKOS_INLINE_FUNCTION void CalculateK(const double xp[3],const double xq[3], co
    }
 
 }
+
+void CalculateK(const double xp[3],const double xq[3], double K[9])
+{
+   double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);
+   double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
+                        { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
+                        { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
+
+      for(int d0 = 0; d0 < 3; d0++){
+         for(int d1 = 0; d1 < 3; d1++){
+
+            if(r < 1.0e-9){
+               K[d0*3 + d1] = 0.0;
+            }
+            else{
+               K[d0*3 + d1] = K_M[d0][d1] * 1.0/(4.0*Kokkos::numbers::pi*pow(r, 3.0) );
+               // printf("K[%d] = %f \n", d0*3+d1, K[d0*3+d1]);
+            }
+	          
+        }
+      }
+
+}
+
+void Calculate_scalarK(const double xp[3],const double xq[3], double* scal_K)
+{
+   double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);
+   if(r < 1.0e-9){
+      *scal_K = 0.0;
+   }
+   else{
+      *scal_K = 1.0/(4.0*Kokkos::numbers::pi*pow(r, 3.0) );
+      // printf("K = %f \n", *scal_K);
+   }
+}
+
 } // end namespace GREENS FUNCTION
 } // end namespace ExaMPM
 

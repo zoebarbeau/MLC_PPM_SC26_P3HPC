@@ -70,7 +70,6 @@ class Mesh
         std::array<double, 3> global_high_corner = { global_bounding_box[3],
                                                      global_bounding_box[4],
                                                      global_bounding_box[5] };
-
         for ( int d = 0; d < 3; ++d )
         {
             _min_domain_global_node_index[d] = 0;

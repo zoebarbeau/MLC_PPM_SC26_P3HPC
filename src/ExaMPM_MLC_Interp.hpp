@@ -361,7 +361,6 @@ KOKKOS_INLINE_FUNCTION
     double xg[3] = { i*g.cell_size - g.center, j*g.cell_size - g.center,
 	             k*g.cell_size - g.center};
 
-    Kokkos::printf(" x %f y %f z %f \n", xg[0],xg[1],xg[2]);
     //difference between particle and grid position, needed for interpolation
     double xdiff[3] = { xp[0]-xg[0], xp[1]-xg[1], xp[2]-xg[2]};
     double xdiff2[3] = { pow(xdiff[0], 2.0), pow(xdiff[1],2.0), pow(xdiff[2], 2.0) };

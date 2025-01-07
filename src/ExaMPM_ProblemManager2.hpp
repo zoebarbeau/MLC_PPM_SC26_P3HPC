@@ -118,6 +118,7 @@ class ProblemManager
 
 	std::cout << " hp particle " << hp << std::endl;
 	std::cout << " _center particle " << _center << std::endl;
+
 	// Grid Layout
         auto node_vector_layout = Cabana::Grid::createArrayLayout(
             _mesh->localGrid(), 3, Cabana::Grid::Node() );
@@ -159,7 +160,6 @@ class ProblemManager
         names[0] = "F"; names[1] = "lap_u";
         names[2] = "pre_corr_v"; names[3] = "post_corr_v";
         // create an array and store the name of each variable:
-        std::cout << " hp " << _hp << std::endl;
 
 	// Particle Deposition Grid Layout
     }
