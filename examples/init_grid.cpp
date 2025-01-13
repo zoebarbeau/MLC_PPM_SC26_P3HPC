@@ -7,8 +7,6 @@
 
 #include <Kokkos_Core.hpp>
 
-<<<<<<< HEAD
-=======
 #include <complex>
 #include "fftx3.hpp"
 // #include "interface.hpp"
@@ -16,9 +14,7 @@
 // #include "rconvObj.hpp"
 //#include "mddftObj.hpp"
 
->>>>>>> origin/FFTX_GreensFunction
 #include <mpi.h>
-
 #include <array>
 #include <cmath>
 
@@ -45,11 +41,7 @@ struct ParticleInitFunc
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
         q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
-<<<<<<< HEAD
        if ( (q <= 2) ) //0.65) ) //&& (r >= 0.35) )
-=======
-       if ( (q <= 3) ) 
->>>>>>> origin/FFTX_GreensFunction
        {  
 
 	//Stuff for a Vortex Ring	
@@ -160,7 +152,6 @@ int main( int argc, char* argv[] )
         std::cerr << "\nwhere cell_size       edge length of a computational "
                      "cell (domain is unit cube)\n";
         std::cerr
-<<<<<<< HEAD
             << "      parts_per_cell  particles per cell in each direction\n";
         std::cerr << "      halo_cells      number of halo cells\n";
         std::cerr << "      dt              time step size\n";

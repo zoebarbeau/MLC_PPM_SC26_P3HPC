@@ -160,6 +160,7 @@ void initializeParticles( const ExecSpace& exec_space,
 
 
             // Particle.
+	   double px[3];
             particle_type particle;
            int pid = cell_id; // * particles_per_cell + ip +
            // Set the particle position.

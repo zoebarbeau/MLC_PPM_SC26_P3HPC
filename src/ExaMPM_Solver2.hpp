@@ -23,7 +23,7 @@
 #include <ExaMPM_Convolution.hpp>
 #include <memory>
 #include <string>
-
+#include <ExaMPM_Remap.hpp>
 #include <mpi.h>
 
 namespace ExaMPM
@@ -129,12 +129,12 @@ class Solver : public SolverBase
 
 
         // Output initial state.
-       outputParticles();
-       Remap::W44( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
+ //      outputParticles();
+ //      Remap::W44( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
        std::cout << " remap before " << std::endl;
 //       Remap::Test_Remap_Particles( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
 //       LocalCorrection::test_greens();
-//       LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
+       LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
  //      LocalCorrection::Test_L27( ExecutionSpace(), *_pm,*_gridp,num_D0,extent,center,cell_size);
 
        std::cout << " correction " << std::endl;
@@ -143,15 +143,18 @@ class Solver : public SolverBase
        std::cout << " test convolution " << std::endl; 
 //     LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
 //                                 extent,center,cell_size, hp);
+
+       Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
+
        std::cout << "interpolation " << std::endl; 
-//       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp );  
+       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp );  
        std::cout << " Nbody " << std::endl;  
 
-       //    Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
-    //   Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
+ //      Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
+ //    Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
 
        _step += 1;
-       outputParticles();
+//       outputParticles();
     }
 
 

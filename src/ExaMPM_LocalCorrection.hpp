@@ -924,7 +924,6 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
         GreensFunction::Calculate_qK(x, xq, vort, K);
 	GreensFunction::Calculate_qK(xp_minus, xq, vort, K_minus);
 	GreensFunction::Calculate_qK(xp_plus, xq, vort, K_plus);
-        double K[3];
 
 
 	//Correct Velocity at P with Local Neighbor Interaction at Q
