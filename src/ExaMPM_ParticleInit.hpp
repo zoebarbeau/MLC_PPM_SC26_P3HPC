@@ -32,8 +32,10 @@ void filterEmpties( const ExecutionSpace& exec_space,
 {
     using memory_space = typename CreationView::memory_space;
 
+    
     // Determine the empty particle positions in the compaction zone.
     int num_particles = particles.size();
+    std::cout << " num particles 1 " << num_particles << std::endl;
     Kokkos::View<int*, memory_space> empties(
         Kokkos::ViewAllocateWithoutInitializing( "empties" ),
         std::min( num_particles - local_num_create, local_num_create ) );
@@ -47,9 +49,12 @@ void filterEmpties( const ExecutionSpace& exec_space,
                     empties( count ) = i;
                 }
                 ++count;
+                Kokkos::printf(" count %d ", count);
             }
         } );
 
+        
+    std::cout << " num particles 2" << num_particles << std::endl;
 
     // Compact the list so the it only has real particles.
     Kokkos::parallel_scan(
@@ -58,6 +63,7 @@ void filterEmpties( const ExecutionSpace& exec_space,
         KOKKOS_LAMBDA( const int i, int& count, const bool final_pass ) {
             if ( particle_created( i ) )
             {
+                Kokkos::printf( " particles created %d ", i);
                 if ( final_pass )
                 {
                     particles.setTuple( empties( count ),
@@ -67,8 +73,10 @@ void filterEmpties( const ExecutionSpace& exec_space,
             }
         } );
 
+    std::cout << " pre resize " << std::endl;
     particles.resize( local_num_create );
 
+    std::cout << " pre shrink " << std::endl;
     particles.shrinkToFit();
 
 }
@@ -133,7 +141,8 @@ void initializeParticles( const ExecSpace& exec_space,
                              particles_per_cell_dim;
     int num_particles = particles_per_cell * owned_cells.size();
     particles.resize( num_particles );
-
+ 
+    std::cout << " num particles init " << num_particles << std::endl;
     // Creation status.
     auto particle_created = Kokkos::View<bool*, memory_space>(
         Kokkos::ViewAllocateWithoutInitializing( "particle_created" ),
@@ -142,16 +151,16 @@ void initializeParticles( const ExecSpace& exec_space,
     std::cout << " hp particle initialize " << hp << std::endl;
     // Initialize particles.
     int local_num_create = 0;
-   // Kokkos::parallel_reduce(
-   //     "init_particles_uniform",
-   //     Cabana::Grid::createExecutionPolicy( owned_cells, exec_space ),
-   //     KOKKOS_LAMBDA( const int i, const int j, const int k,
-   //                    int& create_count ) {
-    Cabana::Grid::grid_parallel_reduce(
-        "uniform grid", exec_space, local_grid, Cabana::Grid::Ghost(),
-        Cabana::Grid::Node(),
-        KOKKOS_LAMBDA( const int i, const int j, const int k, int& create_count)
-        {
+    Kokkos::parallel_reduce(
+        "init_particles_uniform",
+        Cabana::Grid::createExecutionPolicy( owned_cells, exec_space ),
+        KOKKOS_LAMBDA( const int i, const int j, const int k,
+                       int& create_count ) {
+//    Cabana::Grid::grid_parallel_reduce(
+//        "uniform grid", exec_space, local_grid, Cabana::Grid::Ghost(),
+ //       Cabana::Grid::Node(),
+//        KOKKOS_LAMBDA( const int i, const int j, const int k, int& create_count)
+//        {
             // Compute the owned local cell id.
             int i_own = i; // - owned_cells.min( Dim::I );
             int j_own = j; //- owned_cells.min( Dim::J );
@@ -181,11 +190,13 @@ void initializeParticles( const ExecSpace& exec_space,
            {
                             particles.setTuple( pid, particle );
                             ++create_count;
+                           Kokkos::printf(" PID %d ", pid);
            }
                  //   }
         },
         local_num_create );
 
+    std::cout << " created particles = " << local_num_create << std::endl;
     // Filter empties.
     filterEmpties( exec_space, local_num_create, particle_created, particles );
 }

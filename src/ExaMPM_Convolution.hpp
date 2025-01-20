@@ -59,26 +59,28 @@ void Test_F(const ExecutionSpace& exec_space, const ProblemManagerType& pm, cons
       pm.save_F( "Test_F",1,0); 
 
 }
- 
+
 template <class ExecutionSpace, class ProblemManagerType>
-void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent, const double center, const double h)
+void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent, const double center, const double h, const int DIM)
 {
   auto F = pm.get( Location::Node(),Field::F() );
-  
   Kokkos::View<double*> F1D("Fvector", extent*extent*extent);
-
+  //Kokkos::View<int*> x_cord("xcord", extent*extent*extent);
+  //Kokkos::View<int*> y_cord("ycord", extent*extent*extent);
+  //Kokkos::View<int*> z_cord("zcord", extent*extent*extent);
   // Copy data from 3D to 1D using a parallel loop
    Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {extent, extent, extent, 1}), 
         KOKKOS_LAMBDA(const int i, const int j, const int k, const int m) {
             int index = i * extent * extent + j * extent + k;
-            F1D(index) = F(i, j, k,0);
-            //Kokkos::printf("F1D = %f, index = %d \n", F1D(index), index);
+            F1D(index) = F(i, j, k,DIM);
+//            x_cord(index) = i; y_cord(index) = j; z_cord(index) = k;
+             Kokkos::printf("F1D = %f, index = %d F = %f \n", F1D(index), index, F(i,j,k,DIM));
         });
   double *F1D_vec = F1D.data();
 
  
   // Lattice Green's function
-  std::ifstream infileLGF("/home/h82/Documents/Bluestone/P3M/MLC_PPM/LatticeGreensFunction/exec/phiTrimmed");
+  std::ifstream infileLGF("/g/g16/barbeau2/CPU/MLC_PPM/LatticeGreensFunction/exec/phiTrimmed");
   std::vector<double> lgf_values;
   if(infileLGF.is_open()){
     std::string line;
@@ -174,7 +176,7 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
     //     std::cout << " " << symbol[i0] << std::endl;        
     // }
  // Convolution F*G
-    double *output = new double[domaindouble_x * domaindouble_y * domaindouble_z];
+    double *output = new double[extent * extent * extent];
   
     // //Vector of void pointers
     args.clear();
@@ -183,9 +185,9 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
     args.push_back(symbol);
 
     sizes.clear();
-    sizes.push_back(domaindouble_x);
-    sizes.push_back(domaindouble_y);
-    sizes.push_back(domaindouble_z);
+    sizes.push_back(extent);
+    sizes.push_back(extent);
+    sizes.push_back(extent);
 
     //rconv class
     RCONVProblem conv{args, sizes, "rconv"};
@@ -193,10 +195,35 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
     // // Run the transform
     conv.transform();
 
-    for(int i0 = 0; i0 < (domaindouble_x)*(domaindouble_y)*(domaindouble_z); i0++){      
+    for(int i0 = 0; i0 < (extent)*(extent)*(extent); i0++){     
+        if( output[i0] > 1e-9) {
         std::cout << " " << output[i0] << std::endl;        
+        }
     }
+   
+     auto velx = pm.get(Location::Node(), Field::velx()); 
+     auto velocity_g = pm.get(Location::Node(), Field::Velocity()); 
+     Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}),
+        KOKKOS_LAMBDA(const int i, const int j, const int k) {
+            int index = i * extent * extent + j * extent + k;
+            velocity_g(i, j, k,DIM) = output[index]; 
+            if (DIM == 0){
 
+              velx(i,j,k,0) = output[index];
+
+            }
+            if( velocity_g(i,j,k,DIM) > 0 ){
+               Kokkos::printf( " velocity %f \n ", velocity_g(i,j,k,DIM) );
+            }
+      });
+
+      if( DIM == 0){
+           pm.save_v( "Convolution_V",1,0);
+
+      }
+           //Kokkos::printf("F1D = %f, index = %d \n", F1D(index), index);
+             //        });
+             //
 //  int half_extent = extent/2;
 
 //  for(int i = 0; i < domaindouble_x; i++){

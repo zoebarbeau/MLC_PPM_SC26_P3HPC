@@ -34,14 +34,17 @@ struct ParticleInitFunc
     KOKKOS_INLINE_FUNCTION bool operator()( const double x[3],
                                             ParticleType& p ) const
     {   
-	double r,s,theta, q;
+	double r,s,theta, q, loc;
         double pi = 2*acos(0.0);
         double magn,vortx, vorty, vortz;
 	r = pow( pow(x[0], 2.0) + pow(x[1],2.0),  0.5);
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
         q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
-       if ( (q <= 2) ) //0.65) ) //&& (r >= 0.35) )
+        loc =  pow( pow(x[0] - 2.0, 2.0) + pow(x[1] -2.0,2.0) + pow(x[2] -2.0, 2.0),  0.5);
+
+
+       if ( (loc <= 0.1) ) //0.65) ) //&& (r >= 0.35) )
        {  
 
 	//Stuff for a Vortex Ring	
@@ -76,7 +79,7 @@ struct ParticleInitFunc
 
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d] +0.15*_hp; //+0.2*_hp; // + 0.125; //0.5*_h;
+                 Cabana::get<2>( p, d ) = x[d]; // +0.15*_hp; //+0.2*_hp; // + 0.125; //0.5*_h;
 							//
 		 Kokkos::printf(" x %f y %f z %f \n", Cabana::get<2>(p,0), Cabana::get<2>(p,1), Cabana::get<2>(p,2));
 	//	 Kokkos::printf(" y %f ", Cabana::get<2>(p,1));

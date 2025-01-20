@@ -102,7 +102,7 @@ class ProblemManager
 		    const std::shared_ptr<mesh_type>& pmesh,
                     const InitFunc& create_functor,
                     const int particles_per_cell, const double cell_size, 
-		    const double center, const double hp, const double extent)
+		    const double center, const double hp, const double extent, const double extentp)
         : _mesh( mesh )
 	, _pmesh( pmesh )  
         , _cell_size( cell_size )
@@ -111,10 +111,11 @@ class ProblemManager
         , _center(center)
 	, _hp(hp)
         , _extent(extent)
+        , _extentp(extentp)
     {
         initializeParticles( exec_space, *( _pmesh->localGrid() ),
                              particles_per_cell, create_functor, _particles,
-		             _center, _hp, _extent);
+		             _center, _hp,_extentp);
 
 	std::cout << " hp particle " << hp << std::endl;
 	std::cout << " _center particle " << _center << std::endl;
@@ -267,7 +268,7 @@ class ProblemManager
     //   _particles.shrinkToFit();
        remapParticles( exec_space, *( _pmesh->localGrid() ),
                              _ppc, create_functor, _vorticity_hp, _particles,
-		             _center, _hp, _extent );
+		             _center, _hp, _extentp);
 
 
     }	    
@@ -293,7 +294,7 @@ class ProblemManager
 
 
   private:
-    double _amp, _cell_size,_hp, _center, _extent;
+    double _amp, _cell_size,_hp, _center, _extent, _extentp;
     int _ppc;
     particle_list _particles;
     std::shared_ptr<node_array> _velx,_Fx;
