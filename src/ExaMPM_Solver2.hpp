@@ -118,8 +118,8 @@ class Solver : public SolverBase
 	auto gridpositions = _gridp->get( Grid::Position() );
      //   std::cout << "get pos nump " << nump << " numDO " << num_D0 << " cellsize " << cell_size <<" GLOBAL NUM CELL " << global_num_cell[0] << std::endl;
 	// 5x5x5 grid particle list
-	corr_radius = 5;
-        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.20);
+	corr_radius = 4;
+        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
        
         //1x1x1 grid particle list
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);
@@ -134,8 +134,7 @@ class Solver : public SolverBase
 
         // Output initial state.
        outputParticles();
- //      Remap::W44( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
-       std::cout << " remap before " << std::endl;
+//     Remap::W44( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
 //       Remap::Test_Remap_Particles( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
 //       LocalCorrection::test_greens();
        LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
@@ -152,18 +151,17 @@ class Solver : public SolverBase
 
       } 
 */
-      LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
-                       extent,center,cell_size, hp, corr_radius);
+       LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
+                     extent,center,cell_size, hp, corr_radius);
 
 //       Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
 
        std::cout << "interpolation " << std::endl; 
       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
        std::cout << " Nbody " << std::endl;  
-
  //      Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
  //    Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
-
+//        LocalCorrection::Test_ReadBack(ExecutionSpace(), *_pm, *_neigh_list, c,extent+1, center, cell_size, hp, corr_radius );
        _step += 1;
        outputParticles();
     }
