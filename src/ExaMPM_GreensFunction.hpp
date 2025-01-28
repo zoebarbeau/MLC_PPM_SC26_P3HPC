@@ -27,16 +27,32 @@ namespace GreensFunction
 //---------------------------------------------------------------------------//
 // Particle-to-grid.
 //
-void Calculate_qK(const double xp[3],const double xq[3], const double up[3], double K[3])
+void Calculate_qK(const double xp[3],const double xq[3], const double up[3], double K[3],const double h, const int corr_radius)
 {
    double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);
    double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
                         { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
                         { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
-
-   if( r < pow(10.0,-9.0) )
+   double delta = 0.5*pow(h, 0.5)*corr_radius;
+   if( r < delta) 
    {
-         K[0] = 0; K[1] = 0; K[2] = 0;
+   
+
+       
+      for(int d0 = 0; d0 < 3; d0++){
+         for(int d1 = 0; d1 < 3; d1++){
+
+
+           K_M[d0][d1] *= 1.0/(4.0*Kokkos::numbers::pi)*(4-3*r/pow(delta, 3.0) );
+        }
+
+      }
+
+
+      
+      DenseLinearAlgebra::matVecMultiply(K_M, up, K);
+
+
    }else
    {
       for(int d0 = 0; d0 < 3; d0++){

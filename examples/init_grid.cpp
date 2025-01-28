@@ -34,7 +34,7 @@ struct ParticleInitFunc
     KOKKOS_INLINE_FUNCTION bool operator()( const double x[3],
                                             ParticleType& p ) const
     {   
-	double r,s,theta, q, loc;
+	double r,s,theta, q, loc, R, U;
         double pi = 2*acos(0.0);
         double magn,vortx, vorty, vortz;
 	r = pow( pow(x[0], 2.0) + pow(x[1],2.0),  0.5);
@@ -42,11 +42,13 @@ struct ParticleInitFunc
         q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
         loc =  pow( pow(x[0] - 2.0, 2.0) + pow(x[1] -2.0,2.0) + pow(x[2] -2.0, 2.0),  0.5);
+        R = 0.5;
+        U = 1.0;
 
+//       if ( (loc <= 0.1) ) //0.65) ) //&& (r >= 0.35) )
+//       {  
 
-       if ( (loc <= 0.1) ) //0.65) ) //&& (r >= 0.35) )
-       {  
-
+         if( q <= 3){
 	//Stuff for a Vortex Ring	
   //          if( (s < 0.15+_h) && (s > 0.15 - _h) ){		
 	    
@@ -62,13 +64,17 @@ struct ParticleInitFunc
 		 std::cout << "theta " << theta << std::endl;
 	      }	      
 */	           
-              // Vorticity
-              vortz = 0;
-	      vortx = x[1]; 
-	      vorty = -(x[0]); 
-	      Cabana::get<0>( p, 0 ) = 1.0; //vortx;
-              Cabana::get<0>( p, 1 ) = 1.0; //vorty;
-              Cabana::get<0>( p, 2) = 1.0;
+              // Vorticity RING
+         //     vortz = 0;
+	 //     vortx = x[1]; 
+	 //     vorty = -(x[0]); 
+	 //
+	      vortz = 0.0;
+              vortx = 1.0; //15.0*U/(2.0*R*R)*x[1];
+              vorty = 0.0; //-15.0*U/(2.0*R*R)*x[0];
+	      Cabana::get<0>( p, 0 ) = vortx; //vortx;
+              Cabana::get<0>( p, 1 ) = vorty; //vorty;
+              Cabana::get<0>( p, 2) = vortz;
               
               // Velocity
               for ( int d = 0; d < 3; ++d ){
@@ -79,9 +85,9 @@ struct ParticleInitFunc
 
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d]; // +0.15*_hp; //+0.2*_hp; // + 0.125; //0.5*_h;
+                 Cabana::get<2>( p, d ) = x[d]; //+0.2*_hp; // + 0.125; //0.5*_h;
 							//
-		 Kokkos::printf(" x %f y %f z %f \n", Cabana::get<2>(p,0), Cabana::get<2>(p,1), Cabana::get<2>(p,2));
+//		 Kokkos::printf(" x %f y %f z %f \n", Cabana::get<2>(p,0), Cabana::get<2>(p,1), Cabana::get<2>(p,2));
 	//	 Kokkos::printf(" y %f ", Cabana::get<2>(p,1));
 	//	 Kokkos::printf(" z %f ", Cabana::get<2>(p,2));
 	      return true;
@@ -97,20 +103,20 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
                const std::string& exec_space, const double hp )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
-    Kokkos::Array<double, 6> global_box = { -5, -5,-5, 5, 5, 5 };
-    double center = 5;
+    Kokkos::Array<double, 6> global_box = { -5.5,-5.5,-5.5,5.5,5.5,5.5};
+    double center = 5.5;
     int c      = 4;
     // Compute the number of cells in each direction. The user input must
     // squarely divide the domain.
     std::array<int, 3> global_num_cell = {
-        static_cast<int>( 10.0 / cell_size ),
-        static_cast<int>( 10.0 / cell_size ),
-        static_cast<int>( 10.0 / cell_size ) };
+        static_cast<int>( 11.0 / cell_size ),
+        static_cast<int>( 11.0 / cell_size ),
+        static_cast<int>( 11.0 / cell_size ) };
 
     std::array<int, 3> pgrid_num_cell = {
-        static_cast<int>( 10.0 / hp ),
-        static_cast<int>( 10.0 / hp ),
-        static_cast<int>( 10.0 / hp ) };
+        static_cast<int>( 11.0 / hp ),
+        static_cast<int>( 11.0 / hp ),
+        static_cast<int>( 11.0 / hp ) };
 
     // This will look like a 2D problem so make the Y direction periodic.
     std::array<bool, 3> periodic = { false, false, false };

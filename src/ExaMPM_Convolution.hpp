@@ -74,7 +74,7 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
             int index = i * extent * extent + j * extent + k;
             F1D(index) = F(i, j, k,DIM);
 //            x_cord(index) = i; y_cord(index) = j; z_cord(index) = k;
-             Kokkos::printf("F1D = %f, index = %d F = %f \n", F1D(index), index, F(i,j,k,DIM));
+     //        Kokkos::printf("F1D = %f, index = %d F = %f \n", F1D(index), index, F(i,j,k,DIM));
         });
   double *F1D_vec = F1D.data();
 
@@ -196,9 +196,9 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
     conv.transform();
 
     for(int i0 = 0; i0 < (extent)*(extent)*(extent); i0++){     
-        if( output[i0] > 1e-9) {
-        std::cout << " " << output[i0] << std::endl;        
-        }
+     //   if( output[i0] > 1e-9) {
+        std::cout << " output = \n" << output[i0] << std::endl;        
+     //   }
     }
    
      auto velx = pm.get(Location::Node(), Field::velx()); 
@@ -207,18 +207,18 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
             int index = i * extent * extent + j * extent + k;
             velocity_g(i, j, k,DIM) = output[index]; 
-            if (DIM == 0){
+            if (DIM == 1){
 
               velx(i,j,k,0) = output[index];
 
             }
-            if( velocity_g(i,j,k,DIM) > 0 ){
+     //       if( abs(velocity_g(i,j,k,DIM)) > 0 ){
                Kokkos::printf( " velocity %f \n ", velocity_g(i,j,k,DIM) );
-            }
+      //      }
       });
 
-      if( DIM == 0){
-           pm.save_v( "Convolution_V",1,0);
+      if( DIM == 1){
+           pm.save_v( "Convolutionfftx_V",1,0);
 
       }
            //Kokkos::printf("F1D = %f, index = %d \n", F1D(index), index);

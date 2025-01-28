@@ -35,7 +35,7 @@ void filterEmpties( const ExecutionSpace& exec_space,
     
     // Determine the empty particle positions in the compaction zone.
     int num_particles = particles.size();
-    std::cout << " num particles 1 " << num_particles << std::endl;
+    std::cout << " num particles at start " << num_particles << std::endl;
     Kokkos::View<int*, memory_space> empties(
         Kokkos::ViewAllocateWithoutInitializing( "empties" ),
         std::min( num_particles - local_num_create, local_num_create ) );
@@ -63,7 +63,7 @@ void filterEmpties( const ExecutionSpace& exec_space,
         KOKKOS_LAMBDA( const int i, int& count, const bool final_pass ) {
             if ( particle_created( i ) )
             {
-                Kokkos::printf( " particles created %d ", i);
+   //             Kokkos::printf( " particles created %d ", i);
                 if ( final_pass )
                 {
                     particles.setTuple( empties( count ),
@@ -79,6 +79,7 @@ void filterEmpties( const ExecutionSpace& exec_space,
     std::cout << " pre shrink " << std::endl;
     particles.shrinkToFit();
 
+   std::cout << " num particles after shrink " << particles.size()<< std::endl;
 }
 
 //---------------------------------------------------------------------------//
@@ -190,13 +191,13 @@ void initializeParticles( const ExecSpace& exec_space,
            {
                             particles.setTuple( pid, particle );
                             ++create_count;
-                           Kokkos::printf(" PID %d ", pid);
+         //                  Kokkos::printf(" PID %d ", pid);
            }
                  //   }
         },
         local_num_create );
 
-    std::cout << " created particles = " << local_num_create << std::endl;
+ //   std::cout << " created particles = " << local_num_create << std::endl;
     // Filter empties.
     filterEmpties( exec_space, local_num_create, particle_created, particles );
 }
