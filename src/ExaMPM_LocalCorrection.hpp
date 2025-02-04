@@ -555,12 +555,12 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                    //Correct Velocity
                                    for(int d = 0; d < 3; d++){
                                         velocity_g(ci, cj, ck, d) += K[d];
+
+                                 
                                    }
                                         velx(ci,cj,ck,0) +=K[1];
-                                        if(vortp[0] > 0){
-                              //             Kokkos::printf(" i %d j %d k %d counter %d \n ", ii, jj,kk, counter);
-                              //             Kokkos::printf(" vortp %f u %f v %f w %f xp %f yp %f zp %f xq %f yq %f zq %f \n",vortp[0], velocity_g(ci,cj,ck,0),velocity_g(ci,cj,ck,1),velocity_g(ci,cj,ck,2),xp[0],xp[1],xp[2],xg[0],xg[1],xg[2]);
-                                        }
+                                           Kokkos::printf(" i %d j %d k %d ci %d cj %d ck %d \n ", ii, jj,kk, ci,cj,ck);
+                                           Kokkos::printf(" vortp %f u %f v %f w %f xp %f yp %f zp %f xq %f yq %f zq %f \n",vortp[0], velocity_g(ci,cj,ck,0),velocity_g(ci,cj,ck,1),velocity_g(ci,cj,ck,2),xp[0],xp[1],xp[2],xg[0],xg[1],xg[2]);
                                   }
                           
 
@@ -570,6 +570,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                   }
 
+                 
 	         for( int c0i = imin+1; c0i < imax-1; c0i++)
                    for( int c0j = jmin+1; c0j < jmax-1; c0j++)
                       for( int c0k = kmin+1; c0k < kmax-1; c0k++)
@@ -578,14 +579,16 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                          double xg0[3] = { c0i*h - center, c0j*h - center, c0k*h - center};
 	                 // Calculate 2nd order Laplacian of each velocity component 
 	                 double F_temp[3] = {0.0, 0.0, 0.0};
+
                          MLC_Interp::L27(velocity_g,c0i, c0j, c0k,g,F_temp);
-                  
 		    
                          //Set F
    		         for(int d = 0; d < 3; d++)
 		            F(c0i,c0j,c0k,d) += F_temp[d];
-                   //       Kokkos::printf(" Fx %f Fy %f Fz %f xg %f yg %f zg %f \n", F_temp[0], F_temp[1], F_temp[2],xg0[0],xg0[1],xg0[2] );
-	 
+                         Fx(c0i,c0j,c0k,0) += F_temp[0];
+                            if( abs(F_temp[0] > 0) || abs(F_temp[1] > 0 ) || abs(F_temp[2] > 0 ) ){
+                               Kokkos::printf(" Fx %f Fy %f Fz %f xg %f yg %f zg %f \n", F_temp[0], F_temp[1], F_temp[2],xg0[0],xg0[1],xg0[2] );
+	                    }
 		      }
 
                 for( int ci = imin; ci < imax; ci++)
@@ -603,7 +606,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 	});
 
 
-        Kokkos::parallel_for(
+/*        Kokkos::parallel_for(
         "print_F",
         Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, num_grid ),
         KOKKOS_LAMBDA( const int i ) {
@@ -641,11 +644,11 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
         });
 
-
+*/
              pm.save_v( "Deposition_V",1,0);
              pm.save_F( "error_F",1,0);
 
-           
+/*         
         Kokkos::parallel_for(
         "print_velocity",
          Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, num_grid ),
@@ -683,7 +686,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 
            pm.save_v( "Exact_Vy",1,0);
-
+*/
 
 }
 
@@ -701,13 +704,12 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
     //Get relevant interpolation quantities 
     MLC_Interp::GridData<3> g( h, center);
 
-    //Iterate over D	
-    for(int i = 0; i < extent+1; i++)
-       for(int j = 0; j < extent+1; j++)
-          for( int k = 0; k < extent+1; k++)
-          { 
+     Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {extent+1, extent+1, extent+1}),
+        KOKKOS_LAMBDA(const int i, const int j, const int k) {
 
 	      double xg[3] = { i*h - center, j*h - center, k*h - center };	  
+              double loc = pow( pow(xg[0]-0.875, 2.0) + pow(xg[1]-0.875,2.0) + pow(xg[2]-0.875,2.0) , 0.5);
+              if( loc < pow(10,-6) ){
 	      //iterate over D0	  
               for(int i0 = 1; i0 < extent; i0++)
                 for(int j0 = 1; j0 <= extent; j0++)
@@ -716,7 +718,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                          double x0[3] = { i0*h - center, j0*h - center, k0*h - center };
 			 double r = pow( pow( x0[0]-xg[0], 2.0) + pow( x0[1]-xg[1], 2.0) + pow( x0[2]-xg[2], 2.0), 0.5 );
-
+                //         double r = pow( pow( xg[0], 2.0) + pow( xg[1], 2.0) + pow( xg[2], 2.0), 0.5 );
 			 if( r < pow(10, -8.0) )
 		         {
 		             for(int d = 0; d < 3; d++)		 
@@ -725,38 +727,25 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                              for(int d = 0; d < 3; d++)
 			        velocity_g(i,j,k,d) -= F(i0,j0,k0,d)*1.0/(4.0*Kokkos::numbers::pi*r);
-                                 
+                                velx(i,j,k,0) = velocity_g(i,j,k,0);  
 			       if ( std::abs( F(i0,j0,k0,0)*1.0/(4.0*Kokkos::numbers::pi*r) ) > 0 
 			            || std::abs( F(i0,j0,k0,1)*1.0/(4.0*Kokkos::numbers::pi*r) ) > 0
 				    || std::abs( F(i0,j0,k0,2)*1.0/(4.0*Kokkos::numbers::pi*r) ) > 0  ){
-		/*		std::cout << "r " << r << std::endl;
-			        std::cout << " G " << 1.0/(4.0*Kokkos::numbers::pi*r) << std::endl;
-                                std::cout << " F" << F(i0,j0,k0,0) << std::endl;
-				std::cout << " add " << F(i0,j0,k0,0)*1.0/(4.0*Kokkos::numbers::pi*r) << std::endl;
-				std::cout << "velocity = " << velocity_g(i,j,k,0) << std::endl; */
+
+                                    Kokkos::printf(" r %f x %f y %f z %f F %f i %d j %d k %d \n", r, x0[0], x0[1],x0[2],F(i0,j0,k0,0),i0,j0,k0);
                                 } 
 			 }
  
                     }
 
-           }
+                    double r = pow( pow( xg[0], 2.0) + pow( xg[1], 2.0) + pow( xg[2], 2.0), 0.5 );
+                    Kokkos::printf( " x %f y %f z %f velx %f exact %f \n", xg[0],xg[1],xg[2],velocity_g(i,j,k,0),xg[2] / (4*Kokkos::numbers::pi*pow(r, 3.0) ) );
 
+                }
 
-    //Print out Velocity
-      for( int i = 1; i < extent; i++)
-          for( int j = 1; j < extent; j++)
-             for( int k = 1; k < extent; k++)
-             {
+           });
 
-                double xgg[3] = {i*h - center, j*h - center, k*h - center };
-		double F_temp[3] = {0.0, 0.0, 0.0};
-                MLC_Interp::L27(velocity_g,i,j,k,g,F_temp);
-               velx(i,j,k,0) = velocity_g(i,j,k,1);
-	       Fx(i,j,k,0) = F_temp[1];   
-
-             }
-
-              pm.save_v( "Convolution_V",1,0);
+             pm.save_v( "Convolution_V",1,0);
              pm.save_F( "Laplacian_V",1,0);
 
 }
@@ -807,7 +796,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 	    //Get Ci upper and lower bounds
 	    // getParticleBin(i) gives the cell/bin associated with the ith grid point
-	    // the max and min values of the stencil is built around this bin
+	    // the max a
+	    // nd min values of the stencil is built around this bin
             int imin, imax, jmin, jmax, kmin, kmax;
             Ci_list.getStencilCells( Ci_list.getParticleBin( i ), imin,imax, jmin,
                                jmax, kmin, kmax ); 

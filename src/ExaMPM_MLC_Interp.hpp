@@ -305,7 +305,8 @@ KOKKOS_INLINE_FUNCTION
 		 int  s = abs(s1) + abs(s2) + abs(s3);
 
 	//	 std::cout << " s1 = " << s1 << " s2 = " << s2 << " s3 " << s3 << std::endl;
-	//	 std::cout << " s = " << s << std::endl;
+//		 std::cout << " s = " << s << std::endl;
+//                 Kokkos::printf(" view %f view %f view %f \n ", view(si,sj,sk,0),view(si,sj,sk,1),view(si,sj,sk,2));
 		  if( s == 1)
 	          {
                      
@@ -324,7 +325,7 @@ KOKKOS_INLINE_FUNCTION
 
 		     for(int d = 0; d < 3; d++)
                        u_corner[d] += view(si,sj,sk,d);
-
+                       
 
 		  }	  
 
@@ -336,7 +337,9 @@ KOKKOS_INLINE_FUNCTION
         {
 
              F[d] = ( view(i,j,k,d)*-128.0/30.0 + u_corner[d]*1.0/30.0
-			+ u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) / pow( g.cell_size, 2.0);    
+			+ u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) / pow( g.cell_size, 2.0);   
+
+ 
 
         }
 

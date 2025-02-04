@@ -33,7 +33,8 @@ void Calculate_qK(const double xp[3],const double xq[3], const double up[3], dou
    double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
                         { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
                         { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
-   double delta = 0.5*h*corr_radius;
+   double delta = 3*h;
+
    if( r < delta) 
    {
    
@@ -43,12 +44,12 @@ void Calculate_qK(const double xp[3],const double xq[3], const double up[3], dou
          for(int d1 = 0; d1 < 3; d1++){
 
 
-           K_M[d0][d1] *= 1.0/(4.0*Kokkos::numbers::pi)*(4-3*r/pow(delta, 3.0) );
+           K_M[d0][d1] *= 1.0/(4.0*Kokkos::numbers::pi)*(4-3*r/delta)/pow(delta, 3.0);
         }
 
       }
 
-
+       
       
       DenseLinearAlgebra::matVecMultiply(K_M, up, K);
 
@@ -67,6 +68,12 @@ void Calculate_qK(const double xp[3],const double xq[3], const double up[3], dou
       DenseLinearAlgebra::matVecMultiply(K_M, up, K);
    }
 
+/*   Kokkos::printf("delta %f KM11 %f KM12 %f KM 13 %f KM21 %f KM22 %f KM23 %f KM31 %f KM32 %f KM33 %f \n", delta, K_M[0][0], K_M[0][1],
+                   K_M[0][2], K_M[1][0], K_M[1][1], K_M[1][2],K_M[2][0],  K_M[2][1], K_M[2][2]);
+
+   Kokkos::printf(" K1 %f K2 %f K3 %f \n", K[0],K[1],K[2]);
+
+*/
 }
 
 void CalculateK(const double xp[3],const double xq[3], double K[9])
