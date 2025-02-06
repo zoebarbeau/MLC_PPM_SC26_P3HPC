@@ -118,8 +118,8 @@ class Solver : public SolverBase
 	auto gridpositions = _gridp->get( Grid::Position() );
      //   std::cout << "get pos nump " << nump << " numDO " << num_D0 << " cellsize " << cell_size <<" GLOBAL NUM CELL " << global_num_cell[0] << std::endl;
 	// 5x5x5 grid particle list
-	corr_radius = 8;
-        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.125);
+	corr_radius = 16;
+        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.0625);
        
         //1x1x1 grid particle list
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);

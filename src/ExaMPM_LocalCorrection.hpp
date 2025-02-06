@@ -559,8 +559,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                  
                                    }
                                         velx(ci,cj,ck,0) +=K[1];
-                                           Kokkos::printf(" i %d j %d k %d ci %d cj %d ck %d \n ", ii, jj,kk, ci,cj,ck);
-                                           Kokkos::printf(" vortp %f u %f v %f w %f xp %f yp %f zp %f xq %f yq %f zq %f \n",vortp[0], velocity_g(ci,cj,ck,0),velocity_g(ci,cj,ck,1),velocity_g(ci,cj,ck,2),xp[0],xp[1],xp[2],xg[0],xg[1],xg[2]);
+   //                                        Kokkos::printf(" i %d j %d k %d ci %d cj %d ck %d \n ", ii, jj,kk, ci,cj,ck);
+   //                                        Kokkos::printf(" vortp %f u %f v %f w %f xp %f yp %f zp %f xq %f yq %f zq %f \n",vortp[0], velocity_g(ci,cj,ck,0),velocity_g(ci,cj,ck,1),velocity_g(ci,cj,ck,2),xp[0],xp[1],xp[2],xg[0],xg[1],xg[2]);
                                   }
                           
 
@@ -587,7 +587,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 		            F(c0i,c0j,c0k,d) += F_temp[d];
                          Fx(c0i,c0j,c0k,0) += F_temp[0];
                             if( abs(F_temp[0] > 0) || abs(F_temp[1] > 0 ) || abs(F_temp[2] > 0 ) ){
-                               Kokkos::printf(" Fx %f Fy %f Fz %f xg %f yg %f zg %f \n", F_temp[0], F_temp[1], F_temp[2],xg0[0],xg0[1],xg0[2] );
+ //                              Kokkos::printf(" Fx %f Fy %f Fz %f xg %f yg %f zg %f \n", F_temp[0], F_temp[1], F_temp[2],xg0[0],xg0[1],xg0[2] );
 	                    }
 		      }
 
@@ -732,14 +732,14 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 			            || std::abs( F(i0,j0,k0,1)*1.0/(4.0*Kokkos::numbers::pi*r) ) > 0
 				    || std::abs( F(i0,j0,k0,2)*1.0/(4.0*Kokkos::numbers::pi*r) ) > 0  ){
 
-                                    Kokkos::printf(" r %f x %f y %f z %f F %f i %d j %d k %d \n", r, x0[0], x0[1],x0[2],F(i0,j0,k0,0),i0,j0,k0);
+ //                                   Kokkos::printf(" r %f x %f y %f z %f F %f i %d j %d k %d \n", r, x0[0], x0[1],x0[2],F(i0,j0,k0,0),i0,j0,k0);
                                 } 
 			 }
  
                     }
 
-                    double r = pow( pow( xg[0], 2.0) + pow( xg[1], 2.0) + pow( xg[2], 2.0), 0.5 );
-                    Kokkos::printf( " x %f y %f z %f velx %f exact %f \n", xg[0],xg[1],xg[2],velocity_g(i,j,k,0),xg[2] / (4*Kokkos::numbers::pi*pow(r, 3.0) ) );
+                    double r = pow( pow( xg[0]-0.5, 2.0) + pow( xg[1]-0.5, 2.0) + pow( xg[2]-0.5, 2.0), 0.5 );
+                    Kokkos::printf( " x %f y %f z %f velx %f exact %f \n", xg[0],xg[1],xg[2],velocity_g(i,j,k,0),(xg[2] - 0.5) / (4*Kokkos::numbers::pi*pow(r, 3.0) ) );
 
                 }
 

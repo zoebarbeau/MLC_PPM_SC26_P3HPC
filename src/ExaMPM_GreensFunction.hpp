@@ -33,7 +33,7 @@ void Calculate_qK(const double xp[3],const double xq[3], const double up[3], dou
    double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
                         { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
                         { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
-   double delta = 3*h;
+   double delta = 2*h;
 
    if( r < delta) 
    {
@@ -44,7 +44,7 @@ void Calculate_qK(const double xp[3],const double xq[3], const double up[3], dou
          for(int d1 = 0; d1 < 3; d1++){
 
 
-           K_M[d0][d1] *= 1.0/(4.0*Kokkos::numbers::pi)*(4-3*r/delta)/pow(delta, 3.0);
+           K_M[d0][d1] *= 1.0/(4.0*Kokkos::numbers::pi)*(4-3*r/pow(delta, 3.0));
         }
 
       }
