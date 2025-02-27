@@ -34,23 +34,66 @@ struct ParticleInitFunc
     KOKKOS_INLINE_FUNCTION bool operator()( const double x[3],
                                             ParticleType& p ) const
     {   
-	double r,s,theta, q, loc, R, U,loc2;
+	double r,s,theta, q, loc, R, U;
         double pi = 2*acos(0.0);
         double magn,vortx, vorty, vortz;
+	r = pow( pow(x[0], 2.0) + pow(x[1],2.0),  0.5);
+	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
         q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
-        loc = pow( pow(x[0]-0.2, 2.0) + pow(x[1]-0.2,2.0) + pow(x[2]-0.2, 2.0),  0.5);
-        loc2 = pow( pow(x[0]+0.2, 2.0) + pow(x[1]+0.2,2.0) + pow(x[2]+0.2, 2.0),  0.5);
-        R = 0.2;
-        U = 0.2;
 
-        if( q  <= 0.2+1e-6 ){
-	
-	      vortz = 0.0;
-              vortx = 15.0*U/(2.0*R*R)*x[1]*_hp*_hp*_hp;
-              vorty =-15.0*U/(2.0*R*R)*x[0]*_hp*_hp*_hp;
-	      Cabana::get<0>( p, 0 ) = vortx; //vortx;
+        loc =  pow( pow(x[0] - 0.4, 2.0) + pow(x[1] -0.4,2.0) + pow(x[2] -0.4, 2.0),  0.5);
+        R = 0.5;
+        U = 1.0;
+
+//       if ( (loc <= 0.1) ) //0.65) ) //&& (r >= 0.35) )
+//       {  
+
+/*         if( loc <=0.25){
+              vortz = 0.0;
+              vortx = 0.0; //15.0*U/(2.0*R*R)*x[1];
+              vorty = 0.0; //-15.0*U/(2.0*R*R)*x[0];
+              Cabana::get<0>( p, 0 ) = vortx; //vortx;
               Cabana::get<0>( p, 1 ) = vorty; //vorty;
               Cabana::get<0>( p, 2) = vortz;
+
+                     for ( int d = 0; d < 3; ++d ){
+                Cabana::get<1>( p, d ) = 0.0;
+                Cabana::get<3>( p, d ) = 0.0;
+              }
+
+
+              // Position
+               for ( int d = 0; d < 3; ++d )
+                    Cabana::get<2>( p, d ) = x[d]; //+0.2*_hp; // + 0.125; //0.5*_h;
+               return true;
+         }         */
+         if( q <= pow(10,-6.0)){
+	//Stuff for a Vortex Ring	
+  //          if( (s < 0.15+_h) && (s > 0.15 - _h) ){		
+	    
+/*	      if( x[0] == 0 && x[1] > 0 ){
+                  theta = pi/2;
+
+	      }else if( x[0] == 0 && x[1] < 0){
+                  theta = -pi/2;
+
+	      }else{
+                 
+                 theta =atanh(x[1] / (x[0]));
+		 std::cout << "theta " << theta << std::endl;
+	      }	      
+*/	           
+              // Vorticity RING
+         //     vortz = 0;
+	 //     vortx = x[1]; 
+	 //     vorty = -(x[0]); 
+	 //
+	      vortz = 0.0;
+              vortx = 0.0; //15.0*U/(2.0*R*R)*x[1];
+              vorty = 1.0; //-15.0*U/(2.0*R*R)*x[0];
+	      Cabana::get<0>( p, 0 ) = vortx; //vortx;
+              Cabana::get<0>( p, 1 ) = vorty; //vorty;
+              Cabana::get<0>( p, 2 ) = vortz;
               
               // Velocity
               for ( int d = 0; d < 3; ++d ){
@@ -61,8 +104,10 @@ struct ParticleInitFunc
 
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d]; 
-              return true;
+                 Cabana::get<2>( p, d ) = x[d]; //+0.1*_h; // + 0.125; //0.5*_h;
+
+                 Kokkos::printf(" x %f y %f z %f \n", x[0],x[1],x[2]);
+	      return true;
       }
 
         return false;

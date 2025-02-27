@@ -39,16 +39,16 @@ struct ParticleInitFunc
         double magn,vortx, vorty, vortz;
 	r = pow( pow(x[0], 2.0) + pow(x[1],2.0),  0.5);
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
-        q = pow( pow(x[0]-0.5, 2.0) + pow(x[1]-0.5,2.0) + pow(x[2]-0.5, 2.0),  0.5);
+        q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
 
-        loc =  pow( pow(x[0] - 2.0, 2.0) + pow(x[1] -2.0,2.0) + pow(x[2] -2.0, 2.0),  0.5);
+        loc =  pow( pow(x[0] - 0.2, 2.0) + pow(x[1] -0.2,2.0) + pow(x[2] -0.2, 2.0),  0.5);
         R = 0.5;
         U = 1.0;
 
 //       if ( (loc <= 0.1) ) //0.65) ) //&& (r >= 0.35) )
 //       {  
 
-/*         if( loc <=0.25){
+         if( loc <=1e-6){
               vortz = 0.0;
               vortx = 0.0; //15.0*U/(2.0*R*R)*x[1];
               vorty = 0.0; //-15.0*U/(2.0*R*R)*x[0];
@@ -66,7 +66,7 @@ struct ParticleInitFunc
                for ( int d = 0; d < 3; ++d )
                     Cabana::get<2>( p, d ) = x[d]; //+0.2*_hp; // + 0.125; //0.5*_h;
                return true;
-         }         */
+         }        
          if( q <= pow(10,-6.0)){
 	//Stuff for a Vortex Ring	
   //          if( (s < 0.15+_h) && (s > 0.15 - _h) ){		
@@ -93,7 +93,7 @@ struct ParticleInitFunc
               vorty = 1.0; //-15.0*U/(2.0*R*R)*x[0];
 	      Cabana::get<0>( p, 0 ) = vortx; //vortx;
               Cabana::get<0>( p, 1 ) = vorty; //vorty;
-              Cabana::get<0>( p, 2) = vortz;
+              Cabana::get<0>( p, 2 ) = vortz;
               
               // Velocity
               for ( int d = 0; d < 3; ++d ){
@@ -104,7 +104,7 @@ struct ParticleInitFunc
 
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d]+0.15*_h; // + 0.125; //0.5*_h;
+                 Cabana::get<2>( p, d ) = x[d]; ///+0.1*_h; // + 0.125; //0.5*_h;
 
                  Kokkos::printf(" x %f y %f z %f \n", x[0],x[1],x[2]);
 	      return true;
@@ -119,8 +119,8 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
                const std::string& exec_space, const double hp )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
-    Kokkos::Array<double, 6> global_box = { 0.0,0.0,0.0,1.0,1.0,1.0};
-    double center = 0;
+    Kokkos::Array<double, 6> global_box = { -0.5,-0.5,-0.5,0.5,0.5,0.5};
+    double center = 0.5;
     int c      = 4;
     // Compute the number of cells in each direction. The user input must
     // squarely divide the domain.

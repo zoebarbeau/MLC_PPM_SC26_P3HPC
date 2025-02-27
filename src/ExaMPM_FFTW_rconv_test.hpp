@@ -1,0 +1,308 @@
+// Test to check FFTX rconv function
+// Test: Take a field with point charge of 1/h^3 and zeros o.w. 
+// Then convolve it with the Lattice Green's function data coming from PhiTrimmed file
+// Expected result is the Lattice Green's function data on the reduced domain
+
+#ifndef EXAMPM_FFTW_RCONV_TEST_HPP
+#define EXAMPM_FFTW_RCONV_TEST_HPP
+
+#include <ExaMPM_MLC_Interp.hpp>
+#include <ExaMPM_ProblemManager2.hpp>
+#include <Cabana_Grid.hpp>
+#include <ExaMPM_GreensFunction.hpp>
+#include <ExaMPM_GridManager.hpp>
+#include <Kokkos_Core.hpp>
+#include <cmath>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <iomanip>
+# include <vector>
+#include <complex>
+#include <algorithm>
+#include "fftw3.h"
+namespace ExaMPM
+{
+namespace ConvW
+{
+void out_r_col(std::string outName,double* var,int Nx,int Ny,int Nz)
+{
+  std::ofstream ofs(outName,std::ofstream::out);
+  std::ofstream ofs_debug(std::string(outName)+"_debug",std::ofstream::out);
+  for(int k = 0; k < Nz; k++){
+    for(int j = 0; j < Ny; j++){
+      for(int i = 0; i < Nx; i++){
+        int index = k + Nz*j + Ny*Nz*i;
+        ofs_debug << "index " << index <<": " << i<< "," << j << "," << k << ": "<< var[index] << std::endl;
+        ofs << std::scientific << std::setprecision(10) << var[index] << std::endl;
+      }
+    }
+  }
+}
+
+template <class ExecutionSpace, class ProblemManagerType>
+void Conv_fftw(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent, const double center, const double cell_size, const int DIM, const int L)
+{
+    auto F = pm.get( Location::Node(),Field::F() );
+//    Kokkos::deep_copy( F, 0.0);
+
+    //Dims for the physical domain
+    const double Lx = L, Ly = L, Lz = L;
+
+    // Dims for computational domain (# of grid points)
+    int Nx = extent, Ny = extent, Nz = extent;
+
+    // Grid spacing h
+    double hx = Lx/Nx;
+    double hy = Ly/Ny;
+    double hz = Lz/Nz;
+    double h = hx;
+
+    // Field with point charge 
+    double Fpc_3D[Nx][Ny][Nz];
+    double* Fpc_1D  = new double [Nx*Ny*Nz];
+
+    // point charge coordinates
+    
+   int cx = 6;
+   int cy = 6;
+   int cz = 5;
+    std::string phiOutName;
+    std::cout << "enter cx,cy,cz, output file name" << std::endl;
+    std::cin >> cx >> cy >> cz >> phiOutName;
+    std::cout << "echo cx,cy,cz,output file name " << cx << "," << cy << "," << cz <<"," << phiOutName << std::endl;
+/* 
+     for(int i = 0; i < Nx; i++){
+        for(int j = 0; j < Ny; j++){
+            for(int k = 0; k < Nz; k++){
+                // index for 1D F
+                int index_f = i * Nz * Ny + j * Nz + k;
+                if(i == cx && j == cy && k == cz){
+                    F(i,j,k,DIM) = 1.0;///pow(h, 3);
+                }
+                else{
+                    F(i,j,k,DIM) = 0.0;
+                }                                                                                                                                                                       }
+         }
+     }
+*/                //
+    // 3D point charge field
+    for(int i = 0; i < Nx; i++){
+        for(int j = 0; j < Ny; j++){
+            for(int k = 0; k < Nz; k++){
+                // index for 1D F
+                int index_f = i * Nz * Ny + j * Nz + k;
+                Fpc_1D[index_f] = F(i, j, k,DIM);
+            }
+        }
+    }
+
+    // Domain doubling the point charge field. It will act as the second input for rconv
+    
+    int domaindouble_x = 2*Nx;
+    int domaindouble_y = 2*Ny;
+    int domaindouble_z = 2*Nz;
+    // copy rhs into high side, pad the rest with zeros.
+    double* Fpc_domaindouble = new double [domaindouble_x * domaindouble_y * domaindouble_z];
+    for (int index = 0; index < 8*Nx*Ny*Nz;index++) Fpc_domaindouble[index] = 0.;
+    for(int i = 0; i < Nx; i++){
+      for(int j = 0; j < Ny; j++){
+        for(int k = 0; k < Nz; k++){
+
+          int index_dd = (i + Nx)*4*Nz*Ny + (j + Ny)*2*Nz + k + Nx;
+          int index_1d = i * Nz * Ny + j * Nz + k;
+          Fpc_domaindouble[index_dd] = Fpc_1D[index_1d];
+        }
+      } 
+    }
+    
+  //printf("Hello from test!!\n");
+    
+    // Lattice Green's function.
+    // Copy into the doubled domain the LGF, with the center
+    // at the center of the doubled domain..
+    int originx = 0;
+    int originy = 0;
+    int originz = 0;
+  std::ifstream infileLGF("/g/g16/barbeau2/CPU/MLC_PPM/LatticeGreensFunction/exec/phiTrimmed");
+  std::ofstream outlgf ("GOut", std::ofstream::out);
+  std::vector<double> lgf_values(8*Nx*Ny*Nz,0.);
+  if(infileLGF.is_open()){
+    std::string line;
+    int xdir;
+    int ydir; 
+    int zdir;
+    double lgf;
+    while(getline(infileLGF, line)){
+     
+      for(char& c : line){
+        if (c == '(' || c == ')'){
+          c = ' ';
+        }
+      }
+
+      // Remove extra spaces around commas
+      size_t pos = line.find(", ");
+      while (pos != std::string::npos) {
+        line.erase(pos, 1);  // Erase space after comma
+        pos = line.find(", ", pos);
+      }
+
+      // Remove leading and trailing spaces
+      size_t first = line.find_first_not_of(" \t");
+      size_t last = line.find_last_not_of(" \t");
+
+      if (first != std::string::npos && last != std::string::npos) {
+        line = line.substr(first, last - first + 1);
+      }
+      // std::cout << line << std::endl;
+      std::stringstream ss(line);
+      
+      ss >> xdir;
+      ss.ignore(1, ',');
+      ss >> ydir;
+      ss.ignore(1, ',');
+      ss >> zdir;
+      ss.ignore(1, ',');
+      ss >> lgf;
+
+      if((xdir >= (-Nx+originx) && xdir < (Nx+originx)) && (ydir >= (-Ny+originy) && ydir < (Ny+originy)) && (zdir >= (-Nz+originz) && zdir < (Nz+originz))){
+        int index = zdir + Nz - originz + 2*Nz*(ydir + Ny - originy) + 4*Ny*Nz*(xdir + Nx - originx);
+        lgf_values[index] = lgf/h;
+      }
+    }    
+  }
+  else{
+    std::cout << "Unable to open file" << std::endl;
+  }
+    int k0 = Nz/2 + 2*Nz*Ny/2 + 4*Nz*Ny*Nx/2;
+   infileLGF.close();
+
+// Using FFTW to compute the convolution
+
+//****************************//
+//         FFTW test
+// ***************************//
+// Input 1 = lgf_values -> domain doubled symbol
+// Input 2 = Fpc_domaindouble
+
+std::complex<double> zerocx(0.,0.);
+
+//FFTW call to compute r2c dft (Symbol)
+ std::ofstream lgf0 ("lgf0", std::ofstream::out);
+ std::ofstream lgf1 ("out1", std::ofstream::out);
+ std::ofstream lgf2 ("out2", std::ofstream::out);
+ int doubledRToCSize = 2*Nx*2*Ny*(Nz+1);
+ std::cout << "doubledRToCSize = " << doubledRToCSize << std::endl;
+ std::vector<std::complex<double>> out1(doubledRToCSize,zerocx);
+
+// out_r_doubled("outlgf",lgf_values.data(),Nx,Ny,Nz);
+ {
+   fftw_plan p1 = fftw_plan_dft_r2c_3d(
+                                       domaindouble_x, domaindouble_y,
+                                       domaindouble_z, lgf_values.data(),
+                                       (fftw_complex*)out1.data(), FFTW_ESTIMATE);
+   fftw_execute(p1);
+ }
+// out_c("outlgf_t",out1.data(),Nx,Ny,Nz);
+ 
+ std::vector<std::complex<double>> out2(doubledRToCSize,zerocx);
+
+// out_r_doubled("outRhs",Fpc_domaindouble,Nx,Ny,Nz);
+ {
+   fftw_plan p2 = fftw_plan_dft_r2c_3d(domaindouble_x, domaindouble_y,
+                                       domaindouble_z, Fpc_domaindouble,
+                                       (fftw_complex*)out2.data(), FFTW_ESTIMATE);
+   fftw_execute(p2);
+ }
+// out_c("outRhs_t",out2.data(),Nx,Ny,Nz);
+ 
+ std::vector<std::complex<double>> temp(doubledRToCSize,zerocx);
+ for(int i = 0; i < doubledRToCSize; i++){
+   temp[i] = out1[i] * out2[i];
+ }
+ 
+ std::vector<double> out_final(8*Nx*Ny*Nz,0.);
+
+// out_c("outprod_t",temp.data(),Nx,Ny,Nz);
+ {
+   fftw_plan p3 = fftw_plan_dft_c2r_3d(domaindouble_x, domaindouble_y,
+                                      domaindouble_z, (fftw_complex*)temp.data(),
+                                      out_final.data(), FFTW_ESTIMATE);
+   fftw_execute(p3);
+ }
+
+ double normalization = pow(h,3.0)/(Nx*Ny*Nz*8);
+ for (int index = 0; index < 8*Nx*Ny*Nz; index++)
+   out_final[index] *= normalization;
+// out_r_doubled("prod_r",out_final.data(),Nx,Ny,Nz);
+// out_r_col("outfull",out_final.data(),2*Nx,2*Ny,2*Nz);
+ double *extract_output_fftw = new double[Nx * Ny * Nz];
+  // Extracting the output for the orginal size from the above domain doubled output
+ for(int i = 0; i < Nx; i++){
+   for(int j = 0; j < Ny; j++){
+     for(int k = 0; k < Nz; k++){
+       
+       //Calculate the index in the domain doubled output vector,
+       // corresponding to the low corner of the doubled domain.
+       
+       int index_dd = i*4*Ny*Nz + j*2*Nz + k;
+       // Calculate the index in the smaller output of the orginal domain size 
+       int original_index_fftw = i * Nz * Ny + j * Nz + k;
+       // Copying the values from larger to smaller output vector
+       extract_output_fftw[original_index_fftw] = out_final[index_dd];       
+//       std::cout << extract_output_fftw[original_index_fftw] << std::endl;
+     }
+   }
+ }
+
+     auto velx = pm.get(Location::Node(), Field::velx());
+     auto velocity_g = pm.get(Location::Node(), Field::Velocity());
+     Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {Nx,Ny,Nz}),
+        KOKKOS_LAMBDA(const int i, const int j, const int k) {
+            int index_f = i * Nz * Ny + j * Nz + k;
+            double x[3] = {i*h-center,j*h-center,k*h-center};
+            double loc = pow( pow(x[0]-0.4, 2.0) + pow(x[1]-0.4, 2.0) + pow(x[2]-0.4,2.0), 0.5 );
+            double loc2 = pow( pow(x[0]-0.3, 2.0) + pow(x[1]-0.3, 2.0) + pow(x[2]-0.3,2.0), 0.5 );      
+
+            if( DIM == 2 ){
+
+               velocity_g(i, j, k,DIM) = extract_output_fftw[index_f]+0.2;
+
+            }else{
+
+              velocity_g(i, j, k,DIM) = extract_output_fftw[index_f];
+
+            }
+
+            if( loc < 1e-6 ){
+
+            std::cout << std::setprecision(10) << std::scientific <<" location 0.4 = " << (velocity_g(i,j,k, DIM)) << std::endl;
+
+            }
+
+            
+            if( loc2 < 1e-6 ){
+
+            std::cout <<  " location 0.3 = " <<  (velocity_g(i,j,k, DIM)) <<  std::endl;
+
+            }
+
+            if (DIM == 0){
+
+              velx(i,j,k,0) = extract_output_fftw[index_f];
+
+            }
+     });
+    
+     if( DIM == 0){
+       pm.save_v( "Convolutionfftw_test",1,0);
+     }
+     //
+ out_r_col(phiOutName,extract_output_fftw,Nx,Ny,Nz);
+}
+}
+}
+#endif
+

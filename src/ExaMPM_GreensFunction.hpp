@@ -33,7 +33,7 @@ void Calculate_qK(const double xp[3],const double xq[3], const double up[3], dou
    double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
                         { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
                         { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
-   double delta =2.0*h;
+   double delta = 2*h;
    if( r < delta) 
    {
    

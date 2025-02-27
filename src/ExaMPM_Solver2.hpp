@@ -21,6 +21,7 @@
 #include <ExaMPM_GridManager.hpp>
 #include <ExaMPM_Remap.hpp>
 #include <ExaMPM_Convolution.hpp>
+#include <ExaMPM_FFTW_rconv_test.hpp>
 #include <memory>
 #include <string>
 #include <ExaMPM_Remap.hpp>
@@ -79,12 +80,14 @@ class Solver : public SolverBase
             ExecutionSpace(), _mesh, _pmesh, create_functor, particles_per_cell,
 	    cell_size, _center, hp, extent,extentp);
 
-	double grid_min[3] = { 0,
-                               0,
-                               0 };
-        double grid_max[3] = { 1,
-                               1,
-                               1 };
+	double grid_min[3] = { -0.5,
+                               -0.5,
+                               -0.5 };
+        double grid_max[3] = { 0.5,
+                               0.5,
+                               0.5 };
+
+        L = grid_max[0] - grid_min[0];
 
         double grid_delta[3] = {cell_size, cell_size, cell_size};
 
@@ -92,9 +95,10 @@ class Solver : public SolverBase
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
         // 
-	//Real Particle Lists
+	corr_radius = 4;
+        //Real Particle Lists
 	//5x5x5 linked cell stencil
-        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,3*cell_size, 0.333);
+        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
 
 	//1x1x1 linked cell stencil
         _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
@@ -118,8 +122,8 @@ class Solver : public SolverBase
 	auto gridpositions = _gridp->get( Grid::Position() );
      //   std::cout << "get pos nump " << nump << " numDO " << num_D0 << " cellsize " << cell_size <<" GLOBAL NUM CELL " << global_num_cell[0] << std::endl;
 	// 5x5x5 grid particle list
-	corr_radius = 2;
-        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.5);
+
+        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
        
         //1x1x1 grid particle list
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);
@@ -134,13 +138,17 @@ class Solver : public SolverBase
 
         // Output initial state.
        outputParticles();
+       std::cout << " extent " << extent << std::endl;
 //     Remap::W44( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
 //       Remap::Test_Remap_Particles( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
 //       LocalCorrection::test_greens();
         LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
-
+        
+        for(int DIM = 0; DIM < 3; DIM++){
+           ConvW::Conv_fftw(ExecutionSpace(), *_pm, extent,center,cell_size,DIM,L);
+        }
 //         LocalCorrection::Test_MLC_Interp(ExecutionSpace(), *_pm, *_gridp,num_D0,extent,center,cell_size);
-        LocalCorrection::TestConvolution(ExecutionSpace(), *_pm, *_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
+//        LocalCorrection::TestConvolution(ExecutionSpace(), *_pm, *_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
 
 //      LocalCorrection::Test_L27( ExecutionSpace(), *_pm,*_gridp,num_D0,extent,center,cell_size);
 
@@ -151,20 +159,21 @@ class Solver : public SolverBase
 
       } 
 */
-/*       LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
+       LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                      extent,center,cell_size, hp, corr_radius);
 
 //       Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
 
        std::cout << "interpolation " << std::endl; 
-      LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
+       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
        std::cout << " Nbody " << std::endl;  
+
  //      Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
  //    Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
 //        LocalCorrection::Test_ReadBack(ExecutionSpace(), *_pm, *_neigh_list, c,extent+1, center, cell_size, hp, corr_radius );
 //
 //
-*/
+
        _step += 1;
        outputParticles();
     }
@@ -177,7 +186,7 @@ class Solver : public SolverBase
 #ifdef Cabana_ENABLE_HDF5
         Cabana::Experimental::HDF5ParticleOutput::HDF5Config h5_config;
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
-            h5_config, "remap", _pmesh->localGrid()->globalGrid().comm(),
+            h5_config, "h0.1", _pmesh->localGrid()->globalGrid().comm(),
             _step, _time, _pm->numParticle(),
             _pm->get( Location::Particle(), Field::Position() ),
             _pm->get( Location::Particle(), Field::Vorticity() ) );
@@ -213,6 +222,7 @@ class Solver : public SolverBase
     int num_D;
     int extent,extentp;
     double _center;
+    double L;
 };
 
 //---------------------------------------------------------------------------//
