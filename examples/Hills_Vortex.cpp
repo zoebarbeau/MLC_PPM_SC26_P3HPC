@@ -37,20 +37,25 @@ struct ParticleInitFunc
 	double r,s,theta, q, loc, R, U,loc2;
         double pi = 2*acos(0.0);
         double magn,vortx, vorty, vortz;
-        q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
+        double xhalf[3] = {x[0]+_hp*0.5,x[1]+_hp*0.5,x[2]+_hp*0.5};
+        q = sqrt( ( x[0]-0.5)*(x[0]-0.5) +( x[1]-0.5)*(x[1]-0.5) + ( x[2]-0.5)*(x[2] -0.5) );
+        double qhalf = sqrt(xhalf[0]*xhalf[0] + xhalf[1]*xhalf[1] + xhalf[2]*xhalf[2] );
         loc = pow( pow(x[0]-0.2, 2.0) + pow(x[1]-0.2,2.0) + pow(x[2]-0.2, 2.0),  0.5);
         loc2 = pow( pow(x[0]+0.2, 2.0) + pow(x[1]+0.2,2.0) + pow(x[2]+0.2, 2.0),  0.5);
-        R = 0.2;
-        U = 0.2;
+        R = 0.25;
+        U = 1;
 
-        if( q  <= 0.2+1e-6 ){
-	
+
+        if( q  < (0.25-1e-6) ){
+
+           //   std::cout << " x y z " << x[0] << " " << x[1] << " " << x[2] << " q " << q << std::endl; 
 	      vortz = 0.0;
-              vortx = 15.0*U/(2.0*R*R)*x[1]*_hp*_hp*_hp;
-              vorty =-15.0*U/(2.0*R*R)*x[0]*_hp*_hp*_hp;
+              vortx =  15.0*U/(2.0*R*R)*(x[1]-0.5)*_hp*_hp*_hp;
+              vorty = -15.0*U/(2.0*R*R)*(x[0]-0.5)*_hp*_hp*_hp;
+              std::cout << " vortx " << vortx << " vort y " << vorty << std::endl;
 	      Cabana::get<0>( p, 0 ) = vortx; //vortx;
               Cabana::get<0>( p, 1 ) = vorty; //vorty;
-              Cabana::get<0>( p, 2) = vortz;
+              Cabana::get<0>( p, 2 ) = vortz;
               
               // Velocity
               for ( int d = 0; d < 3; ++d ){
@@ -74,8 +79,8 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
                const std::string& exec_space, const double hp )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
-    Kokkos::Array<double, 6> global_box = { -0.5,-0.5,-0.5,0.5,0.5,0.5};
-    double center = 0.5;
+    Kokkos::Array<double, 6> global_box = { 0.0,0.0,0.0,1.0,1.0,1.0};
+    double center = 0;
     int c      = 4;
     // Compute the number of cells in each direction. The user input must
     // squarely divide the domain.

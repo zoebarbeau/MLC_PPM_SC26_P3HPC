@@ -42,7 +42,7 @@ void out_r_col(std::string outName,double* var,int Nx,int Ny,int Nz)
 }
 
 template <class ExecutionSpace, class ProblemManagerType>
-void Conv_fftw(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent, const double center, const double cell_size, const int DIM, const int L)
+void Conv_fftw(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent, const double center, const double cell_size, const int d, const int L)
 {
     auto F = pm.get( Location::Node(),Field::F() );
 //    Kokkos::deep_copy( F, 0.0);
@@ -79,21 +79,22 @@ void Conv_fftw(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
                 // index for 1D F
                 int index_f = i * Nz * Ny + j * Nz + k;
                 if(i == cx && j == cy && k == cz){
-                    F(i,j,k,DIM) = 1.0;///pow(h, 3);
+                    F(i,j,k,d) = 1.0;///pow(h, 3);
                 }
                 else{
-                    F(i,j,k,DIM) = 0.0;
+                    F(i,j,k,d) = 0.0;
                 }                                                                                                                                                                       }
          }
      }
-*/                //
+*/  
+
     // 3D point charge field
     for(int i = 0; i < Nx; i++){
         for(int j = 0; j < Ny; j++){
             for(int k = 0; k < Nz; k++){
                 // index for 1D F
                 int index_f = i * Nz * Ny + j * Nz + k;
-                Fpc_1D[index_f] = F(i, j, k,DIM);
+                Fpc_1D[index_f] = F(i, j, k,d);
             }
         }
     }
@@ -266,37 +267,37 @@ std::complex<double> zerocx(0.,0.);
             double loc = pow( pow(x[0]-0.4, 2.0) + pow(x[1]-0.4, 2.0) + pow(x[2]-0.4,2.0), 0.5 );
             double loc2 = pow( pow(x[0]-0.3, 2.0) + pow(x[1]-0.3, 2.0) + pow(x[2]-0.3,2.0), 0.5 );      
 
-            if( DIM == 2 ){
+            if( d == 2 ){
 
-               velocity_g(i, j, k,DIM) = extract_output_fftw[index_f]+0.2;
+               velocity_g(i, j, k,d) = extract_output_fftw[index_f]+0.2;
 
             }else{
 
-              velocity_g(i, j, k,DIM) = extract_output_fftw[index_f];
+              velocity_g(i, j, k,d) = extract_output_fftw[index_f];
 
             }
 
             if( loc < 1e-6 ){
 
-            std::cout << std::setprecision(10) << std::scientific <<" location 0.4 = " << (velocity_g(i,j,k, DIM)) << std::endl;
+            std::cout << std::setprecision(10) << std::scientific <<" location 0.4 = " << (velocity_g(i,j,k, d)) << std::endl;
 
             }
 
             
             if( loc2 < 1e-6 ){
 
-            std::cout <<  " location 0.3 = " <<  (velocity_g(i,j,k, DIM)) <<  std::endl;
+            std::cout <<  " location 0.3 = " <<  (velocity_g(i,j,k, d)) <<  std::endl;
 
             }
 
-            if (DIM == 0){
+            if (d == 0){
 
               velx(i,j,k,0) = extract_output_fftw[index_f];
 
             }
      });
     
-     if( DIM == 0){
+     if( d == 0){
        pm.save_v( "Convolutionfftw_test",1,0);
      }
      //

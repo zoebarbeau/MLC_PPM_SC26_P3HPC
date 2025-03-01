@@ -39,9 +39,9 @@ struct ParticleInitFunc
         double magn,vortx, vorty, vortz;
 	r = pow( pow(x[0], 2.0) + pow(x[1],2.0),  0.5);
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
-        q = pow( pow(x[0], 2.0) + pow(x[1],2.0) + pow(x[2], 2.0),  0.5);
+        q = pow( pow(x[0]-0.5, 2.0) + pow(x[1]-0.5,2.0) + pow(x[2]-0.5, 2.0),  0.5);
 
-        loc =  pow( pow(x[0] - 0.2, 2.0) + pow(x[1] -0.2,2.0) + pow(x[2] -0.2, 2.0),  0.5);
+       loc =  pow( pow(x[0] - 0.55, 2.0) + pow(x[1] -0.55,2.0) + pow(x[2] -0.55, 2.0),  0.5);
         R = 0.5;
         U = 1.0;
 
@@ -54,7 +54,7 @@ struct ParticleInitFunc
               vorty = 0.0; //-15.0*U/(2.0*R*R)*x[0];
               Cabana::get<0>( p, 0 ) = vortx; //vortx;
               Cabana::get<0>( p, 1 ) = vorty; //vorty;
-              Cabana::get<0>( p, 2) = vortz;
+              Cabana::get<0>( p, 2)  = vortz;
 
                      for ( int d = 0; d < 3; ++d ){
                 Cabana::get<1>( p, d ) = 0.0;
@@ -119,8 +119,8 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
                const std::string& exec_space, const double hp )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
-    Kokkos::Array<double, 6> global_box = { -0.5,-0.5,-0.5,0.5,0.5,0.5};
-    double center = 0.5;
+    Kokkos::Array<double, 6> global_box = { 0,0,0,1,1,1};
+    double center = 0;
     int c      = 4;
     // Compute the number of cells in each direction. The user input must
     // squarely divide the domain.

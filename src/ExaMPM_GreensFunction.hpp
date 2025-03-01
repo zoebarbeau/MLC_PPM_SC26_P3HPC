@@ -29,12 +29,12 @@ namespace GreensFunction
 //
 void Calculate_qK(const double xp[3],const double xq[3], const double up[3], double K[3],const double h, const int corr_radius)
 {
-   double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);
+   double r = pow( pow( xp[0] - xq[0], 2) + pow( xp[1] - xq[1], 2) + pow( xp[2] - xq[2], 2), 0.5);
    double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
                         { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
                         { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
-   double delta = 2*h;
-   if( r < delta) 
+   double delta = h;
+   if( r < (delta - 1e-10)) 
    {
    
 

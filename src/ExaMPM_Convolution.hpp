@@ -61,7 +61,7 @@ void Test_F(const ExecutionSpace& exec_space, const ProblemManagerType& pm, cons
 }
 
 template <class ExecutionSpace, class ProblemManagerType>
-void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent, const double center, const double h, const int DIM)
+void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent, const double center, const double h, const int d)
 {
   auto F = pm.get( Location::Node(),Field::F() );
   Kokkos::View<double*> F1D("Fvector", extent*extent*extent);
@@ -72,9 +72,9 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
    Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {extent, extent, extent, 1}), 
         KOKKOS_LAMBDA(const int i, const int j, const int k, const int m) {
             int index = i * extent * extent + j * extent + k;
-            F1D(index) = F(i, j, k,DIM);
+            F1D(index) = F(i, j, k,d);
 //            x_cord(index) = i; y_cord(index) = j; z_cord(index) = k;
-     //        Kokkos::printf("F1D = %f, index = %d F = %f \n", F1D(index), index, F(i,j,k,DIM));
+     //        Kokkos::printf("F1D = %f, index = %d F = %f \n", F1D(index), index, F(i,j,k,d));
         });
   double *F1D_vec = F1D.data();
 
@@ -206,18 +206,18 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
      Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
             int index = i * extent * extent + j * extent + k;
-            velocity_g(i, j, k,DIM) = output[index]; 
-            if (DIM == 1){
+            velocity_g(i, j, k,d) = output[index]; 
+            if (d == 1){
 
               velx(i,j,k,0) = output[index];
 
             }
-     //       if( abs(velocity_g(i,j,k,DIM)) > 0 ){
-               Kokkos::printf( " velocity %f \n ", velocity_g(i,j,k,DIM) );
+     //       if( abs(velocity_g(i,j,k,d)) > 0 ){
+               Kokkos::printf( " velocity %f \n ", velocity_g(i,j,k,d) );
       //      }
       });
 
-      if( DIM == 1){
+      if( d == 1){
            pm.save_v( "Convolutionfftx_V",1,0);
 
       }

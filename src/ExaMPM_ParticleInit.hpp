@@ -174,11 +174,11 @@ void initializeParticles( const ExecSpace& exec_space,
             particle_type particle;
            int pid = cell_id; // * particles_per_cell + ip +
            // Set the particle position.
-           px[0] = i_own * hp - center; //0.5 * spacing[Dim::I] +
+           px[0] = i_own * hp - center + sqrt(0.5)* hp; //0.5 * spacing[Dim::I] +
                                      //ip * spacing[Dim::I] + low_coords[Dim::I];
-           px[1] = j_own * hp - center; //0.5 * spacing[Dim::J] +
+           px[1] = j_own * hp - center + sqrt(0.5)* hp; //0.5 * spacing[Dim::J] +
                                      //jp * spacing[Dim::J] + low_coords[Dim::J];
-           px[2] = k_own * hp - center; //0.5 * spacing[Dim::K] +
+           px[2] = k_own * hp - center + sqrt(0.5) * hp; //0.5 * spacing[Dim::K] +
                                      //kp * spacing[Dim::K] + low_coords[Dim::K];
 
                    

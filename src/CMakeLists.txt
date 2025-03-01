@@ -19,6 +19,8 @@ ExaMPM_VelocityInterpolation.hpp
 ExaMPM_VInterp.hpp
 ExaMPM_VInterpolation.hpp
 ExaMPM_FFTW_rconv_test.hpp
+FFTWLGFConvolution.H
+FFTWLGFConvolutionImplem.H
   )
 
 set(SOURCES
