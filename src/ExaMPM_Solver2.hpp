@@ -94,10 +94,10 @@ class Solver : public SolverBase
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
         // 
-	corr_radius = 16;
+	corr_radius = 4;
         //Real Particle Lists
 	//5x5x5 linked cell stencil
-        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.0625);
+        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
 
 	//1x1x1 linked cell stencil
         _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
@@ -122,7 +122,7 @@ class Solver : public SolverBase
      //   std::cout << "get pos nump " << nump << " numDO " << num_D0 << " cellsize " << cell_size <<" GLOBAL NUM CELL " << global_num_cell[0] << std::endl;
 	// 5x5x5 grid particle list
 
-        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.0625);
+        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
        
         //1x1x1 grid particle list
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);
@@ -138,33 +138,21 @@ class Solver : public SolverBase
         // Output initial state.
        outputParticles();
        std::cout << " extent " << extent << std::endl;
-//     Remap::W44( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
-//       Remap::Test_Remap_Particles( ExecutionSpace(), *_pm, *_W44_list, center, hp, hp);
-//       LocalCorrection::test_greens();
+
+
+
         LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
         
         for(int d = 0; d < 3; d++){
-         //  ConvW::Conv_fftw(ExecutionSpace(), *_pm, extent,center,cell_size,d,L);
+
 
           LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);      
 
         }
-//         LocalCorrection::Test_MLC_Interp(ExecutionSpace(), *_pm, *_gridp,num_D0,extent,center,cell_size);
-//        LocalCorrection::TestConvolution(ExecutionSpace(), *_pm, *_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size);
 
-//      LocalCorrection::Test_L27( ExecutionSpace(), *_pm,*_gridp,num_D0,extent,center,cell_size);
 
-/*       for( int d = 0; d < 3; d++)
-       {
-
-          Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent+1, center, cell_size,d);
-
-      } 
-*/
        LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                      extent,center,cell_size, hp, corr_radius);
-
-//       Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
 
        std::cout << "interpolation " << std::endl; 
        LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
@@ -172,11 +160,11 @@ class Solver : public SolverBase
 
        LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp);
 
- //      Convolution::Test_F( ExecutionSpace(), *_pm, extent, center, cell_size);
- //    Convolution::Conv_fftx(ExecutionSpace(), *_pm, extent, center, cell_size);
-//        LocalCorrection::Test_ReadBack(ExecutionSpace(), *_pm, *_neigh_list, c,extent+1, center, cell_size, hp, corr_radius );
-//
-//
+
+
+
+
+
 
        _step += 1;
        outputParticles();
