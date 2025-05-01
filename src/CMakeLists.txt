@@ -1,6 +1,6 @@
 set(HEADERS
 ExaMPM_BoundaryConditions.hpp
-ExaMPM_Convolution.hpp
+#ExaMPM_Convolution.hpp
 ExaMPM_DenseLinearAlgebra.hpp
 ExaMPM_DriverGrid.hpp
 ExaMPM_GreensFunction.hpp
@@ -21,6 +21,7 @@ ExaMPM_VInterpolation.hpp
 ExaMPM_FFTW_rconv_test.hpp
 FFTWLGFConvolution.H
 FFTWLGFConvolutionImplem.H
+ExaMPM_Convolution_FFTX.H
   )
 
 set(SOURCES

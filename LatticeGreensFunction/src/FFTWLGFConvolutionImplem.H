@@ -2,6 +2,7 @@ LGFConvolution::LGFConvolution(string a_lgffile,
                                double a_h,
                                int a_N)
 {
+  PR_TIMERS("LGFConvolution::constructor");
   m_h = a_h;
   m_N = a_N;
   // Read in LGF values from file a_lgffile, and store in lgf_values
@@ -53,11 +54,35 @@ LGFConvolution::LGFConvolution(string a_lgffile,
       ss.ignore(1, ',');
       ss >> lgf;
 
-      if(xdir >= -Nx && xdir < Nx && ydir >= -Ny && ydir < Ny && zdir >= -Nz && zdir < Nz){
-        int index = zdir + Nz + 2*Nz*(ydir + Ny) + 4*Ny*Nz*(xdir + Nx);
-        lgf_values[index] = lgf/a_h; // includes scaling of h=1 LGF to obtain G^h.
-      }
-    }    
+      //if(xdir >= -Nx && xdir < Nx && ydir >= -Ny && ydir < Ny && zdir >= -Nz && zdir < Nz){
+      //int index = zdir + Nz + 2*Nz*(ydir + Ny) + 4*Ny*Nz*(xdir + Nx);
+      //lgf_values[index] = lgf/a_h; // includes scaling of h=1 LGF to obtain G^h.
+      if(xdir >= 0 && xdir <= Nx && ydir >= 0 && ydir <= Ny && zdir >= 0 && zdir <= Nz)
+        {
+          for (int isign = -1; isign < 2; isign+=2)
+            {
+              for (int jsign = -1; jsign < 2; jsign+=2)
+                {
+                  for (int ksign = -1; ksign < 2; ksign+=2)
+                    {
+                      int zdirsigned = zdir*ksign;
+                      int ydirsigned = ydir*jsign;
+                      int xdirsigned = xdir*isign;
+                      if ((xdirsigned != Nx) &&
+                          (ydirsigned != Ny) &&
+                          (zdirsigned != Nz))
+                        {                        
+                          int index = zdirsigned + Nz +
+                            2*Nz*(ydirsigned + Ny) +
+                            4*Ny*Nz*(xdirsigned + Nx);
+                      
+                          lgf_values[index] = lgf/a_h;
+                        }
+                    }
+                }
+            }
+        }
+    }
   }
   else{
     std::cout << "Unable to open file" << std::endl;
@@ -81,6 +106,7 @@ LGFConvolution::LGFConvolution(string a_lgffile,
 void LGFConvolution::convolveWithG(std::vector<double>& a_dataIn,
                                    std::vector<double>& a_dataOut)
 {
+  PR_TIMERS("LGFConvolution::convolve");
   int Nx = m_N;
   int Ny = m_N;
   int Nz = m_N;
@@ -100,7 +126,7 @@ void LGFConvolution::convolveWithG(std::vector<double>& a_dataIn,
             {
               int index_dd = (i + Nx)*4*Nz*Ny + (j + Ny)*2*Nz + k + Nz;
               int index_1d = i * Nz * Ny + j * Nz + k;
-              dataIndoubled[index_dd] = a_dataIn[index_1d];              
+              dataIndoubled[index_dd] = a_dataIn[index_1d];             
             }
         }
     }

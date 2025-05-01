@@ -11,6 +11,7 @@
 #include <iomanip>
 //#include "Proto.H"
 #include "fftw3.h"
+//using namespace Proto;
 class LGFConvolution
 {
   public:

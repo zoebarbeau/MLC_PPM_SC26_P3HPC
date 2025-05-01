@@ -568,7 +568,6 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
               
                  
-                 double fe_core[3]={0.0,0.0,0.0};
 	         for( int c0i = imin+1; c0i < imax-1; c0i++)
                    for( int c0j = jmin+1; c0j < jmax-1; c0j++)
                       for( int c0k = kmin+1; c0k < kmax-1; c0k++)
@@ -583,7 +582,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                          //Set F
    		         for(int d = 0; d < 3; d++)
 		            F(c0i,c0j,c0k,d) += F_temp[d];
-                            Fx(c0i,c0j,c0k,0) += F_temp[2];
+                            Fx(c0i,c0j,c0k,0) += F_temp[1];
 
                       }
                 for( int ci = imin; ci < imax; ci++)
@@ -599,7 +598,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 	});
 
 
-          pm.save_F("Fz_", 1, 0);
+          pm.save_F("Fy_", 1, 0);
 
 }
 
@@ -941,8 +940,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
   double v_magn, max_error = 0, L2_error = 0;
 
 
-   Kokkos::parallel_reduce("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
-        KOKKOS_LAMBDA(const int i, const int j, const int k, doublet& L2_g) {
+/*   Kokkos::parallel_reduce("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
+        KOKKOS_LAMBDA(const int i, const int j, const int k, double& L2_g) {
           int index_f = i * N * N + j * N + k;
           double x[3] = {i*h-0.5,j*h-0.5,k*h-0.5};
           double v_exact[3],v_error[3];
@@ -964,8 +963,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
             v_exact[1] = -1.5 * (  yz / pow( r, 5.0) )*R3*U;
             v_exact[2] = U*( 1.0 + R3 / (2.0*pow( r, 3.0 ) ) ) - U*1.5*R3 / (  pow( r, 5.0 ) ) * x[2]*x[2] ;
 
-         }
-
+         }, sum);
+*/
    for(int i = 0; i < N; i++){
      for(int j = 0; j < N; j++){
        for(int k = 0; k < N; k++){
@@ -1081,7 +1080,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
       }
     }  
 
-   std::string file="/g/g16/barbeau2/CPU/MLC_PPM/LatticeGreensFunction/exec/phiTrimmed"; 
+   std::string file="/g/g16/barbeau2/CPU/MLC_PPM/LatticeGreensFunction/exec/G_128_Octant"; 
 
    LGFConvolution LGFConv(file,h,extent);
 

@@ -20,7 +20,7 @@
 #include <ExaMPM_LocalCorrection.hpp>
 #include <ExaMPM_GridManager.hpp>
 #include <ExaMPM_Remap.hpp>
-#include <ExaMPM_Convolution.hpp>
+#include <ExaMPM_Convolution_FFTX.hpp>
 #include <ExaMPM_FFTW_rconv_test.hpp>
 #include <memory>
 #include <string>
@@ -145,8 +145,8 @@ class Solver : public SolverBase
         
         for(int d = 0; d < 3; d++){
 
-
-          LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);      
+        ConvolutionFFTX::Conv(ExecutionSpace(), *_pm,extent,center,cell_size,d);
+      //    LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);      
 
         }
 
@@ -160,9 +160,14 @@ class Solver : public SolverBase
 
        LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp);
 
+      
+/*       for(int d = 0; d < 3; d++){
 
+          Remap::VelG_Error( ExecutionSpace(),*_pm,*_W44_list,center,hp,hp,d);
 
+       }
 
+*/
 
 
 
@@ -181,7 +186,8 @@ class Solver : public SolverBase
             h5_config, "h0.1", _pmesh->localGrid()->globalGrid().comm(),
             _step, _time, _pm->numParticle(),
             _pm->get( Location::Particle(), Field::Position() ),
-            _pm->get( Location::Particle(), Field::Vorticity() ) );
+            _pm->get( Location::Particle(), Field::Vorticity() ),
+            _pm->get( Location::Particle(), Field::Velocity() ));
 #else
 #ifdef Cabana_ENABLE_SILO
         Cabana::Grid::Experimental::SiloParticleOutput::writeTimeStep(

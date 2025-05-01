@@ -61,9 +61,9 @@ int main(int argc, char** argv)
     #endif
     
     // SETUP
-#ifdef PR_HDF5
-    // HDF5Handler h5;
-#endif
+    //#ifdef PR_HDF5
+    HDF5Handler h5;
+    //#endif
     int domainSize;
     int numIter = 20;
     int solverInd;
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
   int diamStencil;
   LaplaceStencils(LStencil,diagCoef,diamStencil,solverInd);
   double h = 1.0;
-  testStencil(LStencil);
+  // testStencil(LStencil);
   Box domainBoxValid(Point::Ones(-domainSize/2+1),Point::Ones(domainSize/2-1));
   Box domainBox = domainBoxValid.grow(Point::Ones(diamStencil));
   BoxData<double> phi(domainBox);
@@ -146,54 +146,48 @@ int main(int argc, char** argv)
           if (resnorm < 1.e-14*resnorm0) break;
         }
     }
-  BoxData<double> phiTrimmed(Box(Point::Ones(-domainSize/4+1),Point::Ones(domainSize/4)));
+  //BoxData<double> phiTrimmed(Box(Point::Ones(-domainSize/4+1),Point::Ones(domainSize/4)));
+  BoxData<double> phiTrimmed(Box(Point::Zeroes(),Point::Ones(domainSize/4)));
   phi.copyTo(phiTrimmed);
   Box bx = phiTrimmed.box();
-  std::ofstream ofs ("phiTrimmed", std::ofstream::out);
+  std::ofstream ofs ("G_"+to_string(domainSize/4)+"_Octant", std::ofstream::out);
   for (auto bit : bx)
     {
-      ofs << bit << " , " << std::scientific << std::setprecision(10) << phiTrimmed(bit) << endl;
+      ofs << bit << " , " << std::scientific << std::setprecision(12) << phiTrimmed(bit) << endl;
     }
   BoxData<double> phiExact = forall_p<double>(f_greensfcn,phi.box(),h,Point::Zeros());
-  //h5.writePatch({"data"},1.0,phi,"GreensFunctionFinal"+to_string(domainSize),0);
-  //h5.writePatch({"data"},1.0,phiExact,"GreensFunctionExact"+to_string(domainSize),0);
   phi -= phiExact;
-  //h5.writePatch({"data"},1.0,phi,"GreensFunctionFinalError"+to_string(domainSize),0);
   BoxData<double> LOfPhiE = LStencil(phiExact,-1.0);
-  LOfPhiE += rhs;
-  //h5.writePatch({"data"},1.0,LOfPhiE,"TruncationError"+to_string(domainSize),0);
-
+  //LOfPhiE(Point::Zeros()) += 1.0;
+  BoxData<double> logLphi =
+    forall<double>([] PROTO_LAMBDA
+                   (Var<double>& a_loglphi,
+                    Var<double>& a_lphi)
+                   { 
+                     a_loglphi(0) = log(abs(a_lphi(0)))/log(10.0);
+                   },LOfPhiE);
+  h5.writePatch(1.0,logLphi,"logLphi");
+  
    ofstream filestream;
    ofstream filestreamL;
-   filestreamL.open("LOfPhiE"+to_string(domainSize)+".curve");
-   filestream.open("PhiErrScaled"+to_string(domainSize)+".curve");
-   for (auto bit : domainBoxValid)
+   filestreamL.open("LOfPhiE"+to_string(solverInd) + "_"+to_string(domainSize)+".curve");
+   filestream.open("PhiErrScaled"+to_string(solverInd) + "_"+to_string(domainSize)+".curve");
+   vector<double> phiErr1D(domainSize/4+1,0.);
+   vector<double> LOfPhi1D(domainSize/4+1,0.);
+   for (auto bit : phiTrimmed.box())
      {
-       if ((bit[0]%(domainSize/16) == 0) && (bit[1]%(domainSize/16) == 0)
-#if DIM==3
-           && (bit[2]%(domainSize/16) == 0)
-#endif
-           )
-         {
-           double dist = 0.;
-           double l2dist = 0.;
-           for (int dir = 0; dir < DIM; dir++)
-             {
-               dist = fmax(dist,fabs(bit[dir]*1.0));
-               l2dist += (bit[dir]*1.0)*(bit[dir]*1.0);
-             }
-           l2dist = sqrt(l2dist);
-           if (dist > 2)
-             {  
-               filestream << l2dist << std::scientific 
-                          << " "
-                          << max(abs(phi(bit)*l2dist*M_PI*4.0 + 1.0), 1.e-20);
-                 filestreamL << l2dist << std::scientific 
-                          << " "
-                            << max(abs(LOfPhiE(bit)), 1.e-20)
-             << endl;
-             }
-         }
+       int index1D =
+         max(abs(bit[0]*1.0),max(abs(bit[1]*1.0),abs(bit[2]*1.0)));
+       double gfInv =
+         4*M_PI*sqrt((bit[0]*bit[0]+bit[1]*bit[1] + bit[2]*bit[2])*1.0);       
+       phiErr1D[index1D] = max(phiErr1D[index1D],
+                             abs(abs(phiTrimmed(bit)*gfInv)-1.0));
+       LOfPhi1D[index1D] = max(LOfPhi1D[index1D],abs(LOfPhiE(bit)));
+     }
+   for (int ll = 1; ll < domainSize/4+1; ll++)
+     {
+       filestream << ll << " " << phiErr1D[ll] << endl;
+       filestreamL << ll << " " << LOfPhi1D[ll] << endl;
      }
    filestream.close();
    filestreamL.close();
