@@ -1,6 +1,6 @@
 set(HEADERS
 ExaMPM_BoundaryConditions.hpp
-ExaMPM_Convolution.hpp
+#ExaMPM_Convolution.hpp
 ExaMPM_DenseLinearAlgebra.hpp
 ExaMPM_DriverGrid.hpp
 ExaMPM_GreensFunction.hpp

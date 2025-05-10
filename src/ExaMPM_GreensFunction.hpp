@@ -27,6 +27,7 @@ namespace GreensFunction
 //---------------------------------------------------------------------------//
 // Particle-to-grid.
 //
+KOKKOS_INLINE_FUNCTION
 void Calculate_qK(const double xp[3],const double xq[3], const double up[3], double K[3],const double h, const int corr_radius)
 {
    double r = pow( pow( xp[0] - xq[0], 2) + pow( xp[1] - xq[1], 2) + pow( xp[2] - xq[2], 2), 0.5);
@@ -74,7 +75,7 @@ void Calculate_qK(const double xp[3],const double xq[3], const double up[3], dou
 
 */
 }
-
+KOKKOS_INLINE_FUNCTION
 void CalculateK(const double xp[3],const double xq[3], double K[9])
 {
    double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);
@@ -97,7 +98,7 @@ void CalculateK(const double xp[3],const double xq[3], double K[9])
       }
 
 }
-
+KOKKOS_INLINE_FUNCTION
 void Calculate_scalarK(const double xp[3],const double xq[3], double* scal_K)
 {
    double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);

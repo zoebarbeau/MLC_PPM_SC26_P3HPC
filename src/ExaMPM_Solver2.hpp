@@ -158,7 +158,7 @@ class Solver : public SolverBase
        LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
        std::cout << " Nbody " << std::endl;  
 
-       LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp);
+ //      LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp);
 
 
 
