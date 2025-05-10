@@ -1,0 +1,2 @@
+/g/g16/barbeau2/GPU/kokkos/build/install/bin/kokkos_launch_compiler /g/g16/barbeau2/GPU/kokkos/build/install/bin/nvcc_wrapper /usr/tce/packages/gcc/gcc-8.3.1/bin/g++ /usr/bin/ar qc libexampm.a  CMakeFiles/exampm.dir/ExaMPM_Mesh.cpp.o
+/g/g16/barbeau2/GPU/kokkos/build/install/bin/kokkos_launch_compiler /g/g16/barbeau2/GPU/kokkos/build/install/bin/nvcc_wrapper /usr/tce/packages/gcc/gcc-8.3.1/bin/g++ /usr/bin/ranlib libexampm.a
