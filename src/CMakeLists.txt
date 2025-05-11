@@ -21,6 +21,8 @@ ExaMPM_VInterpolation.hpp
 ExaMPM_FFTW_rconv_test.hpp
 FFTWLGFConvolution.H
 FFTWLGFConvolutionImplem.H
+#ExaMPM_Convolution_FFTX.H
+ExaMPM_ConvolutionGPU.H
   )
 
 set(SOURCES

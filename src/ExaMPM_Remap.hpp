@@ -121,6 +121,78 @@ KOKKOS_INLINE_FUNCTION void W44_Weight(double W44[3], double x_g[3], double x_p[
 
 }
 
+
+template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
+void VelG_Error( const ExecutionSpace& exec_space, ProblemManagerType& pm,
+                        const NeighborListType& W44_list, const double center, const double h, const double hp,const int d)
+{
+
+   //Get vorticity, velocity, and positions of real particles
+   auto vorticity_p = pm.get(Location::Particle(), Field::Vorticity());
+   auto velocity_p = pm.get(Location::Particle(), Field::Velocity());
+   auto velx = pm.get(Location::Node(), Field::velx());
+   auto positions  = pm.get(Location::Particle(), Field::Position());
+ 
+   double ratio = pow(h/hp, 3.0);
+   
+   Kokkos::deep_copy(velx, 0.0);
+   
+   Kokkos::parallel_for(
+        "W44",
+        Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, pm.numParticle() ),
+        KOKKOS_LAMBDA( const int p ) {
+
+
+           double xp[3] = { positions(p, 0 ), positions( p, 1 ), positions( p, 2 ) };
+
+           int imin, imax, jmin, jmax, kmin, kmax;
+           W44_list.getStencilCells( W44_list.getParticleBin( p ), imin,imax, jmin,
+                                      jmax, kmin, kmax );
+
+           double x[3]  = { positions( p, 0 )-0.5, positions( p, 1 )-0.5, positions( p, 2 )-0.5 };
+
+           double v_exact[3], v_error[3];
+           double r =  sqrt(x[1]*x[1] + x[2]*x[2]+x[0]*x[0]);
+           double R = 0.25;
+           double R2 = 0.25*0.25;
+           double U = 1;
+           double R3 = 0.25*0.25*0.25;
+           double xz = x[0]*x[2];
+           double yz = x[1]*x[2];
+           if( r < (0.25-1e-8) ){
+
+            v_exact[0] = -1.5*xz/R2*U;
+            v_exact[1] = -1.5*yz/R2*U;
+            v_exact[2] = -1.5*( 1.0 + x[2]*x[2]/R2 -  2.0*r*r/R2  ) *U;
+           }else{
+
+             v_exact[0] = -1.5 * (  xz / pow( r, 5.0) )*R3*U;
+             v_exact[1] = -1.5 * (  yz / pow( r, 5.0) )*R3*U;
+             v_exact[2] = U*( 1.0 + R3 / (2.0*pow( r, 3.0 ) ) ) - U*1.5*R3 / (  pow( r, 5.0 ) ) * x[2]*x[2] ;
+
+           }
+
+
+           for( int i = imin; i < imax; i++)
+              for( int j = jmin; j < jmax; j ++)
+                  for( int k = kmin; k < kmax; k ++)
+                  {
+
+                          double weights[3];
+                          double xg[3] = {i*h - center, j*h - center, k*h - center};
+                          W44_Weight(weights, xg, xp, h, hp);
+                          velx(i,j,k,0) += ( vorticity_p(p,d)  ) * ratio * ( weights[0]*weights[1]*weights[2] );
+
+                  }
+
+ 
+     });
+
+
+   std::stringstream ss;
+   ss << d << "_Vortp";
+   pm.save_v( ss.str(),1,0.0);
+}
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
 void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
                         const NeighborListType& W44_list, const double center, const double h, const double hp)
@@ -162,8 +234,6 @@ void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
 
 			  double weights[3];   
                           double xg[3] = {i*h - center, j*h - center, k*h - center};
-         //               Kokkos::printf(" xp %f xg %f yp %f yg %f zp %f zg %f \n", xp[0],xp[1],xp[2],xg[0],xg[1],xg[2]);
-			  //Calculate Weights
                           W44_Weight(weights, xg, xp, h, hp);
 			  if( std::abs(vorticity_p(p,0) * ratio * ( weights[0]*weights[1]*weights[2] )) > 0.001){
                                   Kokkos::printf(" pre VORT %f \n",vorticity_g(i,j,k,0));

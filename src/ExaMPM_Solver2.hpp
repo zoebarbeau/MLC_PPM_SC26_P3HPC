@@ -20,8 +20,7 @@
 #include <ExaMPM_LocalCorrection.hpp>
 #include <ExaMPM_GridManager.hpp>
 #include <ExaMPM_Remap.hpp>
-#include <ExaMPM_Convolution.hpp>
-#include <ExaMPM_FFTW_rconv_test.hpp>
+#include <ExaMPM_ConvolutionGPU.hpp>
 #include <memory>
 #include <string>
 #include <ExaMPM_Remap.hpp>
@@ -145,24 +144,29 @@ class Solver : public SolverBase
         
         for(int d = 0; d < 3; d++){
 
-
-          LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);      
+        ConvolutionGPU::Conv(ExecutionSpace(), *_pm,extent,center,cell_size,d);
+      //    LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);      
 
         }
 
 
-       LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
+/*       LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                      extent,center,cell_size, hp, corr_radius);
 
        std::cout << "interpolation " << std::endl; 
        LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
        std::cout << " Nbody " << std::endl;  
-
+*/
  //      LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp);
 
+      
+/*       for(int d = 0; d < 3; d++){
 
+          Remap::VelG_Error( ExecutionSpace(),*_pm,*_W44_list,center,hp,hp,d);
 
+       }
 
+*/
 
 
 
@@ -181,7 +185,8 @@ class Solver : public SolverBase
             h5_config, "h0.1", _pmesh->localGrid()->globalGrid().comm(),
             _step, _time, _pm->numParticle(),
             _pm->get( Location::Particle(), Field::Position() ),
-            _pm->get( Location::Particle(), Field::Vorticity() ) );
+            _pm->get( Location::Particle(), Field::Vorticity() ),
+            _pm->get( Location::Particle(), Field::Velocity() ));
 #else
 #ifdef Cabana_ENABLE_SILO
         Cabana::Grid::Experimental::SiloParticleOutput::writeTimeStep(
