@@ -40,7 +40,6 @@ endif()
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include" TYPE FILE FILES
     "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_BoundaryConditions.hpp"
-    "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_Convolution.hpp"
     "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_DenseLinearAlgebra.hpp"
     "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_DriverGrid.hpp"
     "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_GreensFunction.hpp"
@@ -56,9 +55,7 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
     "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_VelocityInterpolation.hpp"
     "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_VInterp.hpp"
     "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_VInterpolation.hpp"
-    "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_FFTW_rconv_test.hpp"
-    "/g/g16/barbeau2/GPU/MLC_PPM/src/FFTWLGFConvolution.H"
-    "/g/g16/barbeau2/GPU/MLC_PPM/src/FFTWLGFConvolutionImplem.H"
+    "/g/g16/barbeau2/GPU/MLC_PPM/src/ExaMPM_ConvolutionGPU.H"
     )
 endif()
 
