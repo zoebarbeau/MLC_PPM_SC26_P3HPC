@@ -144,7 +144,7 @@ class Solver : public SolverBase
         
         for(int d = 0; d < 3; d++){
 
-        ConvolutionGPU::Conv(ExecutionSpace(), *_pm,extent,center,cell_size,d);
+        ConvolutionGPU::Conv_fftx(ExecutionSpace(), *_pm,extent,center,cell_size,d);
       //    LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);      
 
         }

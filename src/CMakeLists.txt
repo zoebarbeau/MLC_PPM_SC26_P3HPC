@@ -18,9 +18,9 @@ ExaMPM_Types.hpp
 ExaMPM_VelocityInterpolation.hpp
 ExaMPM_VInterp.hpp
 ExaMPM_VInterpolation.hpp
-ExaMPM_FFTW_rconv_test.hpp
-FFTWLGFConvolution.H
-FFTWLGFConvolutionImplem.H
+#ExaMPM_FFTW_rconv_test.hpp
+#FFTWLGFConvolution.H
+#FFTWLGFConvolutionImplem.H
 #ExaMPM_Convolution_FFTX.H
 ExaMPM_ConvolutionGPU.H
   )

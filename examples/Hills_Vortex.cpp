@@ -52,7 +52,6 @@ struct ParticleInitFunc
 	      vortz = 0.0;
               vortx =  15.0*U/(2.0*R*R)*(x[1]-0.5)*_hp*_hp*_hp;
               vorty = -15.0*U/(2.0*R*R)*(x[0]-0.5)*_hp*_hp*_hp;
-              std::cout << " vortx " << vortx << " vort y " << vorty << std::endl;
 	      Cabana::get<0>( p, 0 ) = vortx; //vortx;
               Cabana::get<0>( p, 1 ) = vorty; //vorty;
               Cabana::get<0>( p, 2 ) = vortz;
