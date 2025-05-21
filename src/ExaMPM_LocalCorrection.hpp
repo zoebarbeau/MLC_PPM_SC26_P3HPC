@@ -42,8 +42,9 @@ void test_greens( )
        std::cout << " K = " << K[0] << "  " << K[1] << " " << K[2] << std::endl;
 
 }
- template <class ProblemManagerType, class ExecutionSpace, class GridManager>
- void Test_L27( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
+// template <class ProblemManagerType, class ExecutionSpace, class GridManager>
+
+/* void Test_L27( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const GridManager& gridp,
                         const int num_grid, const int extent, const double center, const double h)
 {
@@ -67,10 +68,9 @@ void test_greens( )
    double L[3], Error[3]={0.0,0.0,0.0};
    double L_exact;
 
-   for(int i = 0; i < extent; i++)
-     for(int j = 0; j < extent; j++)
-        for(int k = 0; k < extent; k++)
-        {
+
+  Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}),
+     KOKKOS_LAMBDA(const int i, const int j, const int k) {
 
             double x = i*h - center;
             double y = j*h - center;
@@ -79,13 +79,11 @@ void test_greens( )
                velocity_g(i,j,k,d) = cos(0.5*x)*sin(y)*cos(0.25*z);
 
         }
-
+     
    double errormax = 0;
-   for(int i = 1; i < extent-1 ; i++)
-     for(int j = 1; j < extent-1; j++)
-        for(int k = 1; k < extent-1; k++)
-        {
 
+     Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({1, 1, 1}, {extent-1, extent-1, extent-1}),
+     KOKKOS_LAMBDA(const int i, const int j, const int k) {
             double x = i*h - center;
             double y = j*h - center;
             double z = k*h - center;
@@ -107,10 +105,11 @@ void test_greens( )
 
 
         }
-
+    }
    std::cout << " laplacian error = " << Error[0] << " " << Error[1] << " " << Error[2] << std::endl;
    std::cout << " error max = " << errormax << std::endl;
 }
+*/
  template <class ProblemManagerType, class ExecutionSpace, class GridManager>
  void Test_F( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const GridManager& gridp,
@@ -487,6 +486,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    //Get relevant interpolation quantities 
    MLC_Interp::GridData<3> g( h, center);
 
+   int sz = corr_radius*2 +1;
+   Kokkos::View<double*****> vel_loc("local_velocity",num_grid,sz,sz,sz,3);
    //Iterate over D0 
    Kokkos::parallel_for(
         "Depositions",
@@ -503,8 +504,11 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
             int imin, imax, jmin, jmax, kmin, kmax;
             Ci_list.getStencilCells( Ci_list.getParticleBin( i ), imin,imax, jmin,
                                jmax, kmin, kmax );
-
+           bool particlefound = false;
            int counter = 0;
+
+      //   double vel_loc[5][5][5][3]={0};
+      
    //Reset Ci to 0
             for( int ci = imin; ci <= imax; ci++)
                 for( int cj = jmin; cj <= jmax; cj ++)
@@ -550,41 +554,94 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                    int kp = std::floor((xp[2]+center)/h);
                                    //Correct Velocity
                                    for(int d = 0; d < 3; d++){
-                                        velocity_g(ci, cj, ck, d) += K[d];
-
-                                 
+                   
+                                         vel_loc(i,ci-imin,cj-jmin,ck-kmin,d) = K[d]; //  velocity_g(ci, cj, ck, d) = K[d];
                                    }
+
+                                   
+                                       Kokkos::printf(" velocity %f x %f y %f z %f i %d \n", velocity_g(ci,cj,ck,0),xg[0],xg[1],xg[2],i);
+                                 
                                         velx(ci,cj,ck,0) +=K[0];
 
 
                                   }
                           
 
-                       
+                                   particlefound = true;
 
                          }
 
                   }
 
-              
+//             if( particlefound == true){ 
                  
 	         for( int c0i = imin+1; c0i < imax-1; c0i++)
                    for( int c0j = jmin+1; c0j < jmax-1; c0j++)
                       for( int c0k = kmin+1; c0k < kmax-1; c0k++)
                       {
 
+                
                          double xg0[3] = { c0i*h - center, c0j*h - center, c0k*h - center};
+
 	                 // Calculate 2nd order Laplacian of each velocity component 
 	                 double F_temp[3] = {0.0, 0.0, 0.0};
+                         double u_face[3] = {0.0,0.0,0.0};
+                         double u_corner[3] = {0.0,0.0,0.0};
+                         double u_edge[3] = {0.0,0.0,0.0};
 
-                         MLC_Interp::L27(velocity_g,c0i, c0j, c0k,g,F_temp);
-		    
+
+                         for(int si = c0i-1; si <= c0i+1; si++)
+                            for(int sj = c0j-1; sj <= c0j+1; sj++)
+                               for(int sk = c0k-1; sk <= c0k+1; sk++)
+                                  {
+
+                                      int s1 = si-c0i;
+                                      int s2 = sj-c0j;
+                                      int s3 = sk-c0k;
+                                      int  s = abs(s1) + abs(s2) + abs(s3);
+
+
+                                      if( s == 1)
+                                      {
+ 
+                                         for(int d = 0; d < 3; d++)
+                                           u_face[d] += vel_loc(i,si-imin,sj-jmin,sk-kmin,d);
+
+
+                                      }else if( s == 2)
+                                      {
+
+                                         for(int d = 0; d < 3; d++)
+                                           u_edge[d] += vel_loc(i,si-imin,sj-jmin,sk-kmin,d);
+
+                                      }else if( s == 3)
+                                      {
+
+                                         for(int d = 0; d < 3; d++)
+                                            u_corner[d] += vel_loc(i,si-imin,sj-jmin,sk-kmin,d);
+
+
+                                      }
+
+
+                                  }
+
+
+
+                //         MLC_Interp::L27(vel_loc,c0i-imin, c0j-jmin, c0k-kmin,g,F_temp);
+		
                          //Set F
-   		         for(int d = 0; d < 3; d++)
-		            F(c0i,c0j,c0k,d) += F_temp[d];
-                            Fx(c0i,c0j,c0k,0) += F_temp[1];
+   		         for(int d = 0; d < 3; d++){
+		            F(c0i,c0j,c0k,d) += ( vel_loc(i,c0i-imin,c0j-jmin,c0k-kmin,d)*-128.0/30.0 + u_corner[d]*1.0/30.0 + u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) /(h*h); ///F_temp[d];
+                         }
+                            Fx(c0i,c0j,c0k,0) +=( vel_loc(i,c0i-imin,c0j-jmin,c0k-kmin,0)*-128.0/30.0 + u_corner[0]*1.0/30.0 + u_edge[0]*1.0/10.0 + 7.0/15.0*u_face[0]) /(h*h); // F_temp[0];
+
+                         if(abs(Fx(c0i,c0j,c0k,0) ) > 0 )
+                         Kokkos::printf("c0i %d c0j %d c0z %d Fx %f Fy %f Fz %f \n", c0i,c0j,c0k,F_temp[0],F_temp[1],F_temp[2]);
 
                       }
+
+  //              }
                 for( int ci = imin; ci < imax; ci++)
                   for( int cj = jmin; cj < jmax; cj ++)
                    for( int ck = kmin; ck < kmax; ck ++)
@@ -593,12 +650,12 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                               velocity_g(ci,cj,ck,d) = 0.0;
 
                    }
-
+               
 
 	});
 
 
-          pm.save_F("Fy_", 1, 0);
+//          pm.save_F("Fy_", 1, 0);
 
 }
 
@@ -898,7 +955,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
           double R3 = 0.25*0.25*0.25;
           double xz = x[0]*x[2];
           double yz = x[1]*x[2];
-          if( r < (0.25-1e-8) ){
+/*          if( r < (0.25-1e-8) ){
 
             v_exact[0] = -1.5*xz/R2*U;
             v_exact[1] = -1.5*yz/R2*U;
@@ -912,7 +969,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
      }
 
 
-
+*/
 
             for( int d = 0; d < 3; d++){
               v_error[d] = v_exact[d] - u_p(i,d); 

@@ -94,7 +94,8 @@ class ProblemManager
     using halo = Cabana::Grid::Halo<MemorySpace>;
     using mesh_type = Mesh<MemorySpace>;
 
-    std::shared_ptr<mesh_type> _pmesh;
+    std::shared_ptr<mesh_type> _pmesh,_mesh;
+    std::shared_ptr<node_array> _velx,_Fx;
 
     template <class InitFunc, class ExecutionSpace>
     ProblemManager( const ExecutionSpace& exec_space,
@@ -273,6 +274,7 @@ class ProblemManager
 
     }	    
 
+    KOKKOS_INLINE_FUNCTION
     void save_F(std::string run_name, const int timesteps_done, const double time) const
     {   std::stringstream name;
         name << run_name << "_" << _Fx->label();
@@ -280,6 +282,8 @@ class ProblemManager
         Cabana::Grid::Experimental::BovWriter::writeTimeStep(prefix,timesteps_done, time, *_Fx);
     }
 
+
+    KOKKOS_INLINE_FUNCTION
     void save_v(std::string run_name, const int timesteps_done, const double time) const
     {   std::stringstream name;
         name << run_name << "_" << _velx->label();
@@ -297,14 +301,13 @@ class ProblemManager
     double _amp, _cell_size,_hp, _center, _extent, _extentp;
     int _ppc;
     particle_list _particles;
-    std::shared_ptr<node_array> _velx,_Fx;
     std::shared_ptr<node_array> _vorticity, _F;
     std::shared_ptr<node_array> _velocity,_velocity_corr,_vorticity_hp;
     std::shared_ptr<halo> _node_scatter_halo;
     std::shared_ptr<halo> _node_gather_halo;
     std::shared_ptr<halo> _node_correction_halo;
     std::shared_ptr<halo> _cell_halo;
-    std::shared_ptr<mesh_type> _mesh;
+//    std::shared_ptr<mesh_type> _mesh;
 
 };
 

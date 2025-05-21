@@ -284,20 +284,20 @@ Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<Kokkos::
 //--------------------------------------------------------------//
 // ************* Using RConv function in FFTX *****************//
 //  // Using RConv function in FFTX to compute convolution between symbol and F1D_domaindouble
-//  Kokkos::View<double*, Kokkos::CudaSpace> out_idft("Rconv output", domaindouble_x * domaindouble_y * domaindouble_z);
-//  std::vector<void*> args4 = [&]() {
-//       static auto output_data = out_idft.data();
-//       static auto F1D_data = F1D_domaindouble.data();
-//       static auto symbol1_data = symbol.data();
-//       return std::vector<void*>{&output_data, &F1D_data, &symbol1_data};
-//   }();
-//   std::vector<int> sizes4{domaindouble_x, domaindouble_y, domaindouble_z};
+/*  Kokkos::View<double*, Kokkos::CudaSpace> out_idft("Rconv output", domaindouble_x * domaindouble_y * domaindouble_z);
+  std::vector<void*> args4 = [&]() {
+       static auto output_data = out_idft.data();
+       static auto F1D_data = F1D_domaindouble.data();
+       static auto symbol1_data = symbol.data();
+       return std::vector<void*>{&output_data, &F1D_data, &symbol1_data};
+   }();
+   std::vector<int> sizes4{domaindouble_x, domaindouble_y, domaindouble_z};
 //   //rconv class
-//     RCONVProblem conv{args4, sizes4, "rconv"};
+     RCONVProblem conv{args4, sizes4, "rconv"};
 
 //     // // Run the transform
-//     conv.transform();
-
+     conv.transform();
+*/
 //**************** END of of RCONV ****************************//
 //--------------------------------------------------------------//
 //--------------------------------------------------------------//
@@ -402,21 +402,24 @@ Kokkos::parallel_for("Normalize output", Kokkos::MDRangePolicy<Kokkos::Cuda, Kok
             int out_original_index = k * extent * extent + j * extent + i;
         // Copying the values from larger to smaller output vector
             conv_output[out_original_index] = out_normalize[out_dd_index];
-            printf("conv_output[%d] = %f\n", out_original_index, conv_output[out_original_index]);
+//            printf("conv_output[%d] = %f\n", out_original_index, conv_output[out_original_index]);
         });
 Kokkos::printf("normalize output");
 auto velocity_g = pm.get(Location::Node(), Field::Velocity());
 
 int N = extent;
 double U = 1.0;
+
+Kokkos::printf(" dimension %d", d);
+
      if(d == 2){
 
 Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N+1,N+1,N+1}),
      KOKKOS_LAMBDA(const int i, const int j, const int k) {
 
               int index_f = i * N * N + j * N + k;
-              velocity_g(i,j,k,d) = U;
-              velx(i,j,k,0)       = U;
+//              velocity_g(i,j,k,d) = U;
+//              velx(i,j,k,0)       = U;
 
      });
 
@@ -462,10 +465,11 @@ Kokkos::printf("velocity added");
 
    });
 
-Kokkos::printf("error");
+   Kokkos::printf("error");
    std::stringstream ss;
    ss << d << "_Velocity";
-   pm.save_v( ss.str(),1,0.0);
+//   pm.save_v( ss.str(),1,0.0);
+//   pm.save_v("velocity_0",1,0.0);
 
 
 

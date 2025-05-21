@@ -284,7 +284,6 @@ KOKKOS_INLINE_FUNCTION
  void L27( const ViewType &view, int i, int j, int k, const GridDataType& g, double F[3] )
 {
 
-
 	double u_face[3] = {0.0,0.0,0.0};
         double u_corner[3] = {0.0,0.0,0.0};
 	double u_edge[3] = {0.0,0.0,0.0};
@@ -333,10 +332,12 @@ KOKKOS_INLINE_FUNCTION
 	      }	      
 
 
+//         Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>(0,3),
+//         KOKKOS_LAMBDA(const int d) {
         for(int d = 0; d < 3; d++)
         {
 
-             F[d] = ( view(i,j,k,d)*-128.0/30.0 + u_corner[d]*1.0/30.0
+             F[d] += ( view(i,j,k,d)*-128.0/30.0 + u_corner[d]*1.0/30.0
 			+ u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) / pow( g.cell_size, 2.0);   
 
  
