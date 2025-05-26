@@ -143,16 +143,20 @@ class Solver : public SolverBase
 
 
         LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
-        Cabana::Grid::Experimental::BovWriter::writeTimeStep("Fy",1,0,  *(_pm->_Fx));       
-        Cabana::Grid::Experimental::BovWriter::writeTimeStep("Single_velocity_0",1,0,  *(_pm->_velx));
+        Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"FyREAL",1,0,  *(_pm->_Fx));       
+        Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"Single_velocity_0",1,0,  *(_pm->_velx));
   
-      for(int d = 0; d < 1; d++){
+      for(int d = 0; d < 3; d++){
 
         ConvolutionGPU::Conv_fftx(ExecutionSpace(), *_pm,extent,center,cell_size,d);
         Kokkos::printf("conv");
-      //    LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);      
-
-            Cabana::Grid::Experimental::BovWriter::writeTimeStep("velocity_0",1,0,  *(_pm->_velx));
+      //    LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);    
+        std::stringstream name;
+        name << d << "_velocity";
+        const std::string prefix = name.str();
+        Kokkos::printf("before bov");
+         Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix,1,0,  *(_pm->_velx));
+        Kokkos::printf("after BOV");
         }
 
 
@@ -163,8 +167,8 @@ class Solver : public SolverBase
        LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
        std::cout << " Nbody " << std::endl;  
 
- //      LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp);
-
+       LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
+//         LocalCorrection::Error_V2( ExecutionSpace(), *_pm, extent, cell_size, hp);
       
 /*       for(int d = 0; d < 3; d++){
 

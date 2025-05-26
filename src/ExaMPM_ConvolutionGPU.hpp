@@ -69,7 +69,8 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
 {
   printf("INSIDE CONVOLUTION::CONV_FFTX!!!!\n");
   auto F = pm.get( Location::Node(),Field::F() );
-  auto velx = pm.get( Location::Node(),Field::velx() );  
+  auto velx = pm.get( Location::Node(),Field::velx() ); 
+  Kokkos::deep_copy( velx, 0.0);
   // Kokkos::View<double*> F1D("Fvector", extent*extent*extent);
   Kokkos::View<double*, Kokkos::CudaSpace> F1D("Fvector", extent*extent*extent);
   
@@ -82,7 +83,7 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
   Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<4>>({0, 0, 0, 0}, {extent, extent, extent, 1}), 
         KOKKOS_LAMBDA(const int i, const int j, const int k, const int m) {
             int index = i * extent * extent + j * extent + k;
-            F1D(index) = F(i, j, k, 0);
+            F1D(index) = F(i, j, k, d);
         });
 
 printf("access to f1d before");
@@ -130,8 +131,8 @@ printf("access F1D after parallel");
 
 // GPU domain double F1D
 Kokkos::View<double*, Kokkos::CudaSpace> F1D_domaindouble("Fdomaindouble", domaindouble_x*domaindouble_y*domaindouble_z);
-Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}), 
-        KOKKOS_LAMBDA(const int k, const int j, const int i) {
+Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}),
+           KOKKOS_LAMBDA(const int k, const int j, const int i) {
             int index_dd = (k + extent)*4*extent*extent + (j + extent)*2*extent + i + extent;
             int index_1d = k * extent * extent + j * extent + i;
             F1D_domaindouble[index_dd] = F1D[index_1d];
@@ -232,15 +233,17 @@ Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<Kokkos::
   Kokkos::printf("read in file");
   // Creating a host view for the LGF values
   Kokkos::View<double*, Kokkos::HostSpace> host_LGF("h_view", domaindouble_x * domaindouble_y * domaindouble_z);
+  Kokkos::printf("host view");
   // Copying/storing lgf_values into the host view
   for(int i = 0; i < (domaindouble_x * domaindouble_y * domaindouble_z); i++){
     host_LGF[i] = lgf_values.data()[i];
     // std::cout<<"i = "<< i<<",\t host_LGF = " << host_LGF[i] <<",\t" << lgf_values.data()[i] << std::endl;
   }
-  
+  Kokkos::printf("host access");
   // Creating a device view to deep copy host_LGF values 
   Kokkos::View<double*, Kokkos::CudaSpace> dev_LGF("d_view", domaindouble_x * domaindouble_y * domaindouble_z);
   // deepcopy host to device
+  Kokkos::printf("dev lgf");
   Kokkos::deep_copy(dev_LGF, host_LGF);
 
   Kokkos::printf(" host space file");
@@ -284,7 +287,8 @@ Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<Kokkos::
 //--------------------------------------------------------------//
 // ************* Using RConv function in FFTX *****************//
 //  // Using RConv function in FFTX to compute convolution between symbol and F1D_domaindouble
-/*  Kokkos::View<double*, Kokkos::CudaSpace> out_idft("Rconv output", domaindouble_x * domaindouble_y * domaindouble_z);
+/*
+  Kokkos::View<double*, Kokkos::CudaSpace> out_idft("Rconv output", domaindouble_x * domaindouble_y * domaindouble_z);
   std::vector<void*> args4 = [&]() {
        static auto output_data = out_idft.data();
        static auto F1D_data = F1D_domaindouble.data();
@@ -376,7 +380,7 @@ Kokkos::printf(" c2rdft");
 //     // for(int i0 = 0; i0 < domaindouble_x * domaindouble_y * domaindouble_z; i0++){      
 //     //     std::cout << " i0 = " << i0 << ",\tConvolution_dd =  " << out_idft[i0] << std::endl;        
 //     // }
- 
+
  //**************** END of INDIVIDUAL FUNCTIONS ****************************//
 //--------------------------------------------------------------//
 //--------------------------------------------------------------//
@@ -396,11 +400,8 @@ Kokkos::printf("normalize");
 Kokkos::View<double*, Kokkos::CudaSpace> conv_output("Final exatracted output", extent * extent * extent);
 Kokkos::parallel_for("Normalize output", Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}), 
         KOKKOS_LAMBDA(const int k, const int j, const int i) {
-             //Calculate the index in the domain doubled output vector
             int out_dd_index = k * domaindouble_y * domaindouble_x + j * domaindouble_x + i;
-        // Calculate the index in the smaller output of the orginal domain size 
             int out_original_index = k * extent * extent + j * extent + i;
-        // Copying the values from larger to smaller output vector
             conv_output[out_original_index] = out_normalize[out_dd_index];
 //            printf("conv_output[%d] = %f\n", out_original_index, conv_output[out_original_index]);
         });
@@ -412,17 +413,18 @@ double U = 1.0;
 
 Kokkos::printf(" dimension %d", d);
 
-     if(d == 2){
-
-Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N+1,N+1,N+1}),
+//    if(d == 2){
+/*
+Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
      KOKKOS_LAMBDA(const int i, const int j, const int k) {
 
               int index_f = i * N * N + j * N + k;
-//              velocity_g(i,j,k,d) = U;
-//              velx(i,j,k,0)       = U;
+              velocity_g(i,j,k,d) = U;
+              velx(i,j,k,0)       = U;
 
      });
-
+}
+*/
 Kokkos::printf("velocity added");
      Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
@@ -451,8 +453,10 @@ Kokkos::printf("velocity added");
 
 
           if(d == 2 ){
-            velocity_g(i,j,k,d) += conv_output[index_f];
-            velx(i,j,k,0)  += (conv_output[index_f]);
+            velocity_g(i,j,k,d) = conv_output[index_f] ;
+            velx(i,j,k,0)  = (conv_output[index_f]);
+ //           velocity_g(i,j,k,d) += 1.0;
+ //           velx(i,j,k,0)  += 1.0;
           }else if(d == 1){
 
             velocity_g(i,j,k,d) = conv_output[index_f];
@@ -462,6 +466,8 @@ Kokkos::printf("velocity added");
             velocity_g(i,j,k,d) = conv_output[index_f];
             velx(i,j,k,0) =  conv_output[index_f];
           }
+
+//          Kokkos::printf(" conv output %f d %d \n", conv_output[index_f], d);
 
    });
 
@@ -473,7 +479,7 @@ Kokkos::printf("velocity added");
 
 
 
-}
+
 
 
 

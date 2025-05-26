@@ -135,7 +135,7 @@ KOKKOS_INLINE_FUNCTION
   template <class ViewType, class GridDataType>
 KOKKOS_INLINE_FUNCTION
   std::enable_if_t<3 == GridDataType::num_space_dim, void>
- value( const ViewType& view, const GridDataType& g, typename ViewType::value_type xp[3],
+ value(  const ViewType& view, const GridDataType& g, typename ViewType::value_type xp[3],
            typename ViewType::value_type result[3])
 {
 
@@ -151,107 +151,108 @@ KOKKOS_INLINE_FUNCTION
             result[d] += view( ig, jg, kg, d );
 }
 
-template<class ViewType, class GridDataType >
+template<class GridDataType >
 KOKKOS_INLINE_FUNCTION
  std::enable_if_t<3 == GridDataType::num_space_dim, void>
-  f( const ViewType &view, int i, int j,const int k, const int d,
-         const GridDataType& g,double& fx, double& fy, double& fz)
+  f(const  Kokkos::View<double*****> &view,int i, int j,int k, int d,
+         const GridDataType& g,double& fx, double& fy, double& fz, int p)
 {
 
    double sx_p,sx_m,sy_p,sy_m,sz_p,sz_m;
-
+   i = 1; j = 1; k = 1;
    //Calculate FX       
-   sx_p = view( i+1,j,k+1,d) + view(i+1,j,k-1,d)
-          +view(i+1,j+1,k,d)  + view(i+1,j-1,k,d);
+   sx_p = view(p, i+1,j,k+1,d) + view(p,i+1,j,k-1,d)
+          +view(p,i+1,j+1,k,d)  + view(p,i+1,j-1,k,d);
 
-   sx_m = view( i-1,j,k+1,d) + view( i-1,j,k-1,d)
-          +view( i-1,j+1,k,d) + view( i-1,j-1,k,d);
+   sx_m = view(p, i-1,j,k+1,d) + view(p, i-1,j,k-1,d)
+          +view(p, i-1,j+1,k,d) + view(p, i-1,j-1,k,d);
 
-   fx = (sx_p - sx_m + 2*(view(i+1,j,k,d) - view(i-1,j,k,d)) ) / ( 12.0*g.cell_size );
+   fx = (sx_p - sx_m + 2*(view(p,i+1,j,k,d) - view(p,i-1,j,k,d)) ) / ( 12.0*g.cell_size );
 
    // Calculate FY
-   sy_p = view( i,j+1,k+1,d) + view(i,j+1,k-1,d)
-          +view(i+1,j+1,k,d)  + view(i-1,j+1,k,d);
+   sy_p = view(p, i,j+1,k+1,d) + view(p,i,j+1,k-1,d)
+          +view(p,i+1,j+1,k,d)  + view(p,i-1,j+1,k,d);
 
-   sy_m = view( i,j-1,k+1,d) + view( i,j-1,k-1,d)
-          +view( i+1,j-1,k,d) + view( i-1,j-1,k,d);
+   sy_m = view(p, i,j-1,k+1,d) + view(p, i,j-1,k-1,d)
+          +view(p, i+1,j-1,k,d) + view(p, i-1,j-1,k,d);
 
-   fy = (sy_p - sy_m + 2*(view(i,j+1,k,d) - view(i,j-1,k,d)) ) / ( 12*g.cell_size );
+   fy = (sy_p - sy_m + 2*(view(p,i,j+1,k,d) - view(p,i,j-1,k,d)) ) / ( 12*g.cell_size );
 
    // Calculate FZ
-   sz_p = view( i,j+1,k+1,d) + view(i,j-1,k+1,d)
-          +view(i+1,j,k+1,d)  + view(i-1,j,k+1,d);
+   sz_p = view(p, i,j+1,k+1,d) + view(p,i,j-1,k+1,d)
+          +view(p,i+1,j,k+1,d)  + view(p,i-1,j,k+1,d);
 
-   sz_m = view( i,j+1,k-1,d) + view( i,j-1,k-1,d)
-          +view( i+1,j,k-1,d) + view( i-1,j,k-1,d);
+   sz_m = view(p, i,j+1,k-1,d) + view(p, i,j-1,k-1,d)
+          +view(p, i+1,j,k-1,d) + view(p, i-1,j,k-1,d);
 
-   fz = (sz_p - sz_m + 2*(view(i,j,k+1,d) - view(i,j,k-1,d)) ) / ( 12*g.cell_size );
+   fz = (sz_p - sz_m + 2*(view(p,i,j,k+1,d) - view(p,i,j,k-1,d)) ) / ( 12*g.cell_size );
 
 
 
 }
 
-template<class ViewType, class GridDataType >
+template<class GridDataType >
 KOKKOS_INLINE_FUNCTION
  std::enable_if_t<3 == GridDataType::num_space_dim, void>
- f2( const ViewType &view, int i, int j, int k,int d,
+ f2(const Kokkos::View<double*****> &view, int i, int j, int k,int d,
 	 const GridDataType& g,double& fxx, double& fyy, double& fzz, 
-         double& fxy, double& fxz, double& fyz)
+         double& fxy, double& fxz, double& fyz,int p)
 {
 
+      i = 1; j = 1; k = 1;
       //Calculate fxx
-      fxx = ( view( i+1,j,k,d) + view(i-1,j,k,d) -2*view(i,j,k,d) ) / pow(g.cell_size, 2.0);
+      fxx = ( view(p, i+1,j,k,d) + view(p,i-1,j,k,d) -2*view(p,i,j,k,d) ) / pow(g.cell_size, 2.0);
 
       //Calculate fyy
-      fyy = ( view( i,j+1,k,d ) + view( i,j-1,k,d ) - 2*view(i,j,k,d) ) / pow( g.cell_size, 2.0);
+      fyy = ( view(p, i,j+1,k,d ) + view(p, i,j-1,k,d ) - 2*view(p,i,j,k,d) ) / pow( g.cell_size, 2.0);
 
       //Calculate fzz
-      fzz = ( view( i,j,k+1,d ) + view( i,j,k-1,d ) - 2*view(i,j,k,d) ) / pow(g.cell_size, 2.0);
+      fzz = ( view(p, i,j,k+1,d ) + view(p, i,j,k-1,d ) - 2*view(p,i,j,k,d) ) / pow(g.cell_size, 2.0);
 
       //Calculate fxy
-      fxy = ( ( view( i+1,j+1,k,d) - view( i-1,j+1,k,d) ) 
-            - ( view( i+1,j-1,k,d) - view( i-1,j-1,k,d) ) ) / (4*pow(g.cell_size, 2.0) );
+      fxy = ( ( view(p,i+1,j+1,k,d) - view(p,i-1,j+1,k,d) ) 
+            - ( view(p,i+1,j-1,k,d) - view(p,i-1,j-1,k,d) ) ) / (4*pow(g.cell_size, 2.0) );
 
-      fxz = ( ( view( i+1,j,k+1,d) - view( i-1,j,k+1,d ) )
-	    - ( view( i+1,j,k-1,d) - view( i-1,j,k-1,d ) )) / (4*pow(g.cell_size, 2.0 ) );
+      fxz = ( ( view(p, i+1,j,k+1,d) - view(p, i-1,j,k+1,d ) )
+	    - ( view(p, i+1,j,k-1,d) - view(p, i-1,j,k-1,d ) )) / (4*pow(g.cell_size, 2.0 ) );
 
-      fyz = ( ( view( i,j+1,k+1,d) - view( i,j-1,k+1,d) )
-            - ( view( i,j+1,k-1,d) - view( i,j-1,k-1,d) ) ) / (4*pow(g.cell_size, 2.0 ) );      
+      fyz = ( ( view(p, i,j+1,k+1,d) - view(p, i,j-1,k+1,d) )
+            - ( view(p, i,j+1,k-1,d) - view(p, i,j-1,k-1,d) ) ) / (4*pow(g.cell_size, 2.0 ) );      
 
 
 }
 
-template<class ViewType, class GridDataType >
+template<class GridDataType >
 KOKKOS_INLINE_FUNCTION
  std::enable_if_t<3 == GridDataType::num_space_dim, void>
- f3( const ViewType &view, int i, int j, int k,int d,
+ f3(const  Kokkos::View<double*****> &view, int i, int j, int k,int d,
          const GridDataType& g,double& fxxy, double& fxxz,
-         double& fyyx, double& fyyz, double& fzzx, double& fzzy, double& fxyz)
+         double& fyyx, double& fyyz, double& fzzx, double& fzzy, double& fxyz,int p)
 {
 
      //Calculate fxyz
+     i = 1; j = 1; k = 1;
+     fxyz = ( ( (view(p,i+1,j+1,k+1,d) - view(p,i-1,j+1,k+1,d))
+	      - (view(p,i+1,j-1,k+1,d) - view(p,i-1,j-1,k+1,d))  )
+              - ( (view(p,i+1,j+1,k-1,d) - view(p,i-1,j+1,k-1,d))
+              -   (view(p,i+1,j-1,k-1,d) - view(p,i-1,j-1,k-1,d))) ) / (8*pow(g.cell_size, 3.0) );
 
-     fxyz = ( ( (view(i+1,j+1,k+1,d) - view(i-1,j+1,k+1,d))
-	      - (view(i+1,j-1,k+1,d) - view(i-1,j-1,k+1,d))  )
-              - ( (view(i+1,j+1,k-1,d) - view(i-1,j+1,k-1,d))
-              -   (view(i+1,j-1,k-1,d) - view(i-1,j-1,k-1,d))) ) / (8*pow(g.cell_size, 3.0) );
+     fxxy = ( (view(p,i+1,j+1,k,d) - 2*view(p,i,j+1,k,d) + view(p,i-1,j+1,k,d) )
+             -(view(p,i+1,j-1,k,d) - 2*view(p,i,j-1,k,d) + view(p,i-1,j-1,k,d) ) ) / (2*pow(g.cell_size, 3.0));
 
-     fxxy = ( (view(i+1,j+1,k,d) - 2*view(i,j+1,k,d) + view(i-1,j+1,k,d) )
-             -(view(i+1,j-1,k,d) - 2*view(i,j-1,k,d) + view(i-1,j-1,k,d) ) ) / (2*pow(g.cell_size, 3.0));
+     fxxz = ( (view(p,i+1,j,k+1,d) - 2*view(p,i,j,k+1,d) + view(p,i-1,j,k+1,d) )
+             -(view(p,i+1,j,k-1,d) - 2*view(p,i,j,k-1,d) + view(p,i-1,j,k-1,d) ) ) / (2*pow(g.cell_size, 3.0)); 	     
+     fyyx = ( (view(p,i+1,j+1,k,d) - 2*view(p,i+1,j,k,d) + view(p,i+1,j-1,k,d) )
+             -(view(p,i-1,j+1,k,d) - 2*view(p,i-1,j,k,d) + view(p,i-1,j-1,k,d) ) ) / (2*pow(g.cell_size, 3.0));
 
-     fxxz = ( (view(i+1,j,k+1,d) - 2*view(i,j,k+1,d) + view(i-1,j,k+1,d) )
-             -(view(i+1,j,k-1,d) - 2*view(i,j,k-1,d) + view(i-1,j,k-1,d) ) ) / (2*pow(g.cell_size, 3.0)); 	     
-     fyyx = ( (view(i+1,j+1,k,d) - 2*view(i+1,j,k,d) + view(i+1,j-1,k,d) )
-             -(view(i-1,j+1,k,d) - 2*view(i-1,j,k,d) + view(i-1,j-1,k,d) ) ) / (2*pow(g.cell_size, 3.0));
+     fyyz = ( (view(p,i,j+1,k+1,d) - 2*view(p,i,j,k+1,d) + view(p,i,j-1,k+1,d) )
+             -(view(p,i,j+1,k-1,d) - 2*view(p,i,j,k-1,d) + view(p,i,j-1,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
 
-     fyyz = ( (view(i,j+1,k+1,d) - 2*view(i,j,k+1,d) + view(i,j-1,k+1,d) )
-             -(view(i,j+1,k-1,d) - 2*view(i,j,k-1,d) + view(i,j-1,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
+     fzzx = ( (view(p,i+1,j,k+1,d) - 2*view(p,i+1,j,k,d) + view(p,i+1,j,k-1,d) )
+             -(view(p,i-1,j,k+1,d) - 2*view(p,i-1,j,k,d) + view(p,i-1,j,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
 
-     fzzx = ( (view(i+1,j,k+1,d) - 2*view(i+1,j,k,d) + view(i+1,j,k-1,d) )
-             -(view(i-1,j,k+1,d) - 2*view(i-1,j,k,d) + view(i-1,j,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
-
-     fzzy = ( (view(i,j+1,k+1,d) - 2*view(i,j+1,k,d) + view(i,j+1,k-1,d) )
-             -(view(i,j-1,k+1,d) - 2*view(i,j-1,k,d) + view(i,j-1,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
+     fzzy = ( (view(p,i,j+1,k+1,d) - 2*view(p,i,j+1,k,d) + view(p,i,j+1,k-1,d) )
+             -(view(p,i,j-1,k+1,d) - 2*view(p,i,j-1,k,d) + view(p,i,j-1,k-1,d) ) ) / (2*pow(g.cell_size, 3.0));
 
 
 }
@@ -347,11 +348,11 @@ KOKKOS_INLINE_FUNCTION
 
 }
 
- template <class ViewType, class GridDataType>
+ template <class GridDataType>
 KOKKOS_INLINE_FUNCTION
  std::enable_if_t<3 == GridDataType::num_space_dim, void>
- HarmonicValue( const ViewType& view, const GridDataType& g, typename ViewType::value_type xp[3],
-           typename ViewType::value_type result[3])
+ HarmonicValue(const   Kokkos::View<double*****> &view, const GridDataType& g, double xp[3],
+           double result[3],int p)
 {
 
     for( int d = 0; d < 3; d++)
@@ -373,13 +374,14 @@ KOKKOS_INLINE_FUNCTION
     double fxxy,fxxz,fyyx,fyyz,fzzx,fzzy,fxyz;
     double sx_p, sx_m, sy_p, sy_m, sz_p, sz_m;
 
+    i = 1; j = 1; k = 1;
     for(int d = 0; d < 3; d++)
     {
-        f(view,i,j,k,d,g,fx,fy,fz);
-        f2(view,i,j,k,d,g,fxx,fyy,fzz,fxy,fxz,fyz);
-	f3(view,i,j,k,d,g,fxxy,fxxz,fyyx,fyyz,fzzx,fzzy,fxyz);
+        f(view,i,j,k,d,g,fx,fy,fz,p);
+        f2(view,i,j,k,d,g,fxx,fyy,fzz,fxy,fxz,fyz,p);
+	f3(view,i,j,k,d,g,fxxy,fxxz,fyyx,fyyz,fzzx,fzzy,fxyz,p);
 
-	result[d] = view(i,j,k,d) + xdiff[0]*fx + xdiff[1]*fy + xdiff[2]*fz
+	result[d] = view(p,i,j,k,d) + xdiff[0]*fx + xdiff[1]*fy + xdiff[2]*fz
 		    + 0.5*( xdiff2[0]*fxx + xdiff2[1]*fyy + xdiff2[2]*fzz)
 		    + xdiff[0]*xdiff[1]*fxy + xdiff[1]*xdiff[2]*fyz + xdiff[0]*xdiff[2]*fxz
 		    +1.0/6.0*( (3*xdiff2[0] - xdiff2[1])*xdiff[1]*fxxy
