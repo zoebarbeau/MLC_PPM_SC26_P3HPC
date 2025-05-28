@@ -519,7 +519,9 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                               vel_loc[ci-imin][cj-jmin][ck-kmin][d] = 0.0;
 
                    }
- */   
+ */
+
+            assert(imax - imin <= 9 && jmax - jmin <= 9 && kmax - kmin <= 9);   
 	    auto offset = Pi_list.binOffset(ii,jj,kk);
             auto size   = Pi_list.binSize(ii,jj,kk);
 	    // Iterate over Ci
@@ -574,6 +576,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                   }
 
+                
+                if( counter > 0 ){
                  
 	         for( int c0i = imin+1; c0i < imax-1; c0i++)
                    for( int c0j = jmin+1; c0j < jmax-1; c0j++)
@@ -639,12 +643,25 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 		
                          //Set F
    		         for(int d = 0; d < 3; d++){
-		            F(c0i,c0j,c0k,d) += ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][d]*-128.0/30.0 + u_corner[d]*1.0/30.0 + u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) /pow( g.cell_size, 2.0); ///F_temp[d];
+
+                            double result = ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][d]*-128.0/30.0 + u_corner[d]*1.0/30.0 + 
+                                              u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) / pow( g.cell_size, 2.0 );
+
+                            Kokkos::atomic_add(&F(c0i,c0j,c0k,d), result);
+//		            F(c0i,c0j,c0k,d) += ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][d]*-128.0/30.0 + u_corner[d]*1.0/30.0 + u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) /pow( g.cell_size, 2.0); ///F_temp[d];
                          }
-                            Fx(c0i,c0j,c0k,0) +=( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][0]*-128.0/30.0 + u_corner[0]*1.0/30.0 + u_edge[0]*1.0/10.0 + 7.0/15.0*u_face[0]) /(h*h); // F_temp[0];
+
+                            double result = ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][0]*-128.0/30.0 + u_corner[0]*1.0/30.0 +
+                                              u_edge[0]*1.0/10.0 + 7.0/15.0*u_face[0]) / pow( g.cell_size, 2.0 );
+
+                            Kokkos::atomic_add(&Fx(c0i,c0j,c0k,0), result);
+                          
+//                                Fx(c0i,c0j,c0k,0) +=( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][0]*-128.0/30.0 + u_corner[0]*1.0/30.0 + u_edge[0]*1.0/10.0 + 7.0/15.0*u_face[0]) /(h*h); // F_temp[0];
 
 //                         if(abs(Fx(c0i,c0j,c0k,0) ) > 0 )
 //                         Kokkos::printf("c0i %d c0j %d c0z %d Fx %f Fy %f Fz %f \n", c0i,c0j,c0k,F_temp[0],F_temp[1],F_temp[2]);
+
+                          }
 
                       }
 
@@ -1047,7 +1064,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
   Kokkos::parallel_reduce(
         "L2Grid",
-        Cabana::Grid::createExecutionPolicy( owned_cells, exec_space ),
+        Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA( const int i, const int j, const int k, double& L2_error) {
           int index_f = i * N * N + j * N + k;
           double x[3] = {i*h-0.5,j*h-0.5,k*h-0.5};

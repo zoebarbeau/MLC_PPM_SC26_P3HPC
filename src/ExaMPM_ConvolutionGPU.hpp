@@ -417,18 +417,18 @@ double U = 1.0;
 
 Kokkos::printf(" dimension %d", d);
 
-    if(d == 2){
+/*    if(d == 2){
 
 Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
      KOKKOS_LAMBDA(const int i, const int j, const int k) {
 
               int index_f = i * N * N + j * N + k;
-              velocity_g(i,j,k,d) = U;
-              velx(i,j,k,0)       = U;
+              velocity_g(i,j,k,d) = 1.0;
+              velx(i,j,k,0)       = 1.0;
 
      });
 }
-
+*/
 Kokkos::printf("velocity added");
      Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
@@ -459,8 +459,8 @@ Kokkos::printf("velocity added");
           if(d == 2 ){
             velocity_g(i,j,k,d) = conv_output[index_f] ;
             velx(i,j,k,0)  = (conv_output[index_f]);
- //           velocity_g(i,j,k,d) += 1.0;
- //           velx(i,j,k,0)  += 1.0;
+            velocity_g(i,j,k,d) += 1.0;
+            velx(i,j,k,0)  += 1.0;
           }else if(d == 1){
 
             velocity_g(i,j,k,d) = conv_output[index_f];
