@@ -93,10 +93,10 @@ class Solver : public SolverBase
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
         // 
-	corr_radius = 2;
+	corr_radius = 4;
         //Real Particle Lists
 	//5x5x5 linked cell stencil
-        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.5);
+        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
 
 	//1x1x1 linked cell stencil
         _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
@@ -121,7 +121,7 @@ class Solver : public SolverBase
      //   std::cout << "get pos nump " << nump << " numDO " << num_D0 << " cellsize " << cell_size <<" GLOBAL NUM CELL " << global_num_cell[0] << std::endl;
 	// 5x5x5 grid particle list
 
-        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.5);
+        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
        
         //1x1x1 grid particle list
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);
@@ -143,21 +143,22 @@ class Solver : public SolverBase
 
 
         LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
+        Kokkos::printf("write stuff");
         Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"FyREAL",1,0,  *(_pm->_Fx));       
         Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"Single_velocity_0",1,0,  *(_pm->_velx));
   
-      for(int d = 0; d < 3; d++){
+//      for(int d = 0; d < 3; d++){
 
-        ConvolutionGPU::Conv_fftx(ExecutionSpace(), *_pm,extent,center,cell_size,d);
+        Kokkos::printf("preconv");
+        ConvolutionGPU::Conv_fftx(ExecutionSpace(), *_pm,extent,center,cell_size);
         Kokkos::printf("conv");
       //    LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);    
         std::stringstream name;
-        name << d << "_velocity";
+        name << 2 << "_velocity";
         const std::string prefix = name.str();
         Kokkos::printf("before bov");
          Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix,1,0,  *(_pm->_velx));
         Kokkos::printf("after BOV");
-        }
 
 
        LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,

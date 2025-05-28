@@ -280,9 +280,9 @@ KOKKOS_INLINE_FUNCTION
 
 }
 
-template<class ViewType, class GridDataType>
+template< class GridDataType>
 KOKKOS_INLINE_FUNCTION
- void L27( const ViewType &view, int i, int j, int k, const GridDataType& g, double F[3] )
+ void L27( const   Kokkos::View<double*****> &view, int i, int j, int k, const GridDataType& g, double F[3],int p )
 {
 
 	double u_face[3] = {0.0,0.0,0.0};
@@ -311,20 +311,20 @@ KOKKOS_INLINE_FUNCTION
 	          {
                      
 		    for(int d = 0; d < 3; d++)
-		       u_face[d] += view(si,sj,sk,d);
+		       u_face[d] += view(p,si,sj,sk,d);
 		    
  
 		  }else if( s == 2)
 		  {
 
 		    for(int d = 0; d < 3; d++)
-                       u_edge[d] += view(si,sj,sk,d);
+                       u_edge[d] += view(p,si,sj,sk,d);
 
 		  }else if( s == 3)
                   {
 
 		     for(int d = 0; d < 3; d++)
-                       u_corner[d] += view(si,sj,sk,d);
+                       u_corner[d] += view(p,si,sj,sk,d);
                        
 
 		  }	  
@@ -338,7 +338,7 @@ KOKKOS_INLINE_FUNCTION
         for(int d = 0; d < 3; d++)
         {
 
-             F[d] += ( view(i,j,k,d)*-128.0/30.0 + u_corner[d]*1.0/30.0
+             F[d] = ( view(p,i,j,k,d)*-128.0/30.0 + u_corner[d]*1.0/30.0
 			+ u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) / pow( g.cell_size, 2.0);   
 
  

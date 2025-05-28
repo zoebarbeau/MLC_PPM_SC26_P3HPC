@@ -487,7 +487,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    MLC_Interp::GridData<3> g( h, center);
 
    int sz = corr_radius*2 +1;
-   Kokkos::View<double*****> vel_loc("local_velocity",num_grid,sz,sz,sz,3);
+//   Kokkos::View<double*****> vel_loc("local_velocity",num_grid,sz,sz,sz,3);
+// Kokkos::deep_copy( vel_loc, 0.0);
    //Iterate over D0 
    Kokkos::parallel_for(
         "Depositions",
@@ -504,21 +505,21 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
             int imin, imax, jmin, jmax, kmin, kmax;
             Ci_list.getStencilCells( Ci_list.getParticleBin( i ), imin,imax, jmin,
                                jmax, kmin, kmax );
-           bool particlefound = false;
-           int counter = 0;
+            bool particlefound = false;
+            int counter = 0;
 
-      //   double vel_loc[5][5][5][3]={0};
+            double vel_loc[9][9][9][3]={0};
       
    //Reset Ci to 0
-            for( int ci = imin; ci <= imax; ci++)
+/*            for( int ci = imin; ci <= imax; ci++)
                 for( int cj = jmin; cj <= jmax; cj ++)
                    for( int ck = kmin; ck <= kmax; ck ++)
                    {
                           for(int d = 0; d < 3; d++)
-                              velocity_g(ci,cj,ck,d) = 0.0;
+                              vel_loc[ci-imin][cj-jmin][ck-kmin][d] = 0.0;
 
                    }
-    
+ */   
 	    auto offset = Pi_list.binOffset(ii,jj,kk);
             auto size   = Pi_list.binSize(ii,jj,kk);
 	    // Iterate over Ci
@@ -555,8 +556,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                    //Correct Velocity
                                    for(int d = 0; d < 3; d++){
                    
-                                         vel_loc(i,ci-imin,cj-jmin,ck-kmin,d) = K[d]; 
-                                         velocity_g(ci, cj, ck, d) = K[d];
+
+                                         vel_loc[ci-imin][cj-jmin][ck-kmin][d] += K[d]; 
                                    }
 
                                    
@@ -573,7 +574,6 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                   }
 
-//             if( particlefound == true){ 
                  
 	         for( int c0i = imin+1; c0i < imax-1; c0i++)
                    for( int c0j = jmin+1; c0j < jmax-1; c0j++)
@@ -589,36 +589,42 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                          double u_corner[3] = {0.0,0.0,0.0};
                          double u_edge[3] = {0.0,0.0,0.0};
 
+                        
 
                          for(int si = c0i-1; si <= c0i+1; si++)
                             for(int sj = c0j-1; sj <= c0j+1; sj++)
                                for(int sk = c0k-1; sk <= c0k+1; sk++)
                                   {
 
+
+                                      
                                       int s1 = si-c0i;
                                       int s2 = sj-c0j;
                                       int s3 = sk-c0k;
                                       int  s = abs(s1) + abs(s2) + abs(s3);
+                                      int li = si-imin;
+                                      int lj = sj-jmin;
+                                      int lk = sk-kmin;
 
-
+ 
                                       if( s == 1)
                                       {
  
                                          for(int d = 0; d < 3; d++)
-                                           u_face[d] += vel_loc(i,si-imin,sj-jmin,sk-kmin,d);
+                                           u_face[d] += vel_loc[li][lj][lk][d];
 
 
                                       }else if( s == 2)
                                       {
 
                                          for(int d = 0; d < 3; d++)
-                                           u_edge[d] += vel_loc(i,si-imin,sj-jmin,sk-kmin,d);
+                                           u_edge[d] += vel_loc[li][lj][lk][d];
 
                                       }else if( s == 3)
                                       {
 
                                          for(int d = 0; d < 3; d++)
-                                            u_corner[d] += vel_loc(i,si-imin,sj-jmin,sk-kmin,d);
+                                            u_corner[d] += vel_loc[li][lj][lk][d];
 
 
                                       }
@@ -628,13 +634,14 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 
 
-                //         MLC_Interp::L27(vel_loc,c0i-imin, c0j-jmin, c0k-kmin,g,F_temp);
+//                            MLC_Interp::L27(vel_loc,c0i-imin, c0j-jmin, c0k-kmin,g,F_temp,i);
+
 		
                          //Set F
    		         for(int d = 0; d < 3; d++){
-		            F(c0i,c0j,c0k,d) += ( vel_loc(i,c0i-imin,c0j-jmin,c0k-kmin,d)*-128.0/30.0 + u_corner[d]*1.0/30.0 + u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) /(h*h); ///F_temp[d];
+		            F(c0i,c0j,c0k,d) += ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][d]*-128.0/30.0 + u_corner[d]*1.0/30.0 + u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) /pow( g.cell_size, 2.0); ///F_temp[d];
                          }
-                            Fx(c0i,c0j,c0k,0) +=( vel_loc(i,c0i-imin,c0j-jmin,c0k-kmin,2)*-128.0/30.0 + u_corner[2]*1.0/30.0 + u_edge[2]*1.0/10.0 + 7.0/15.0*u_face[2]) /(h*h); // F_temp[0];
+                            Fx(c0i,c0j,c0k,0) +=( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][0]*-128.0/30.0 + u_corner[0]*1.0/30.0 + u_edge[0]*1.0/10.0 + 7.0/15.0*u_face[0]) /(h*h); // F_temp[0];
 
 //                         if(abs(Fx(c0i,c0j,c0k,0) ) > 0 )
 //                         Kokkos::printf("c0i %d c0j %d c0z %d Fx %f Fy %f Fz %f \n", c0i,c0j,c0k,F_temp[0],F_temp[1],F_temp[2]);
@@ -642,21 +649,31 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                       }
 
   //              }
-                for( int ci = imin; ci < imax; ci++)
+/*              for( int ci = imin; ci < imax; ci++)
                   for( int cj = jmin; cj < jmax; cj ++)
                    for( int ck = kmin; ck < kmax; ck ++)
                    {
                           for(int d = 0; d < 3; d++)
-                              velocity_g(ci,cj,ck,d) = 0.0;
+                              vel_loc[ci][cj][ck][d] = 0.0;
 
                    }
-               
+*/             
 
 	});
 
 
 //          pm.save_F("Fy_", 1, 0);
 
+        int N = extent;
+        Kokkos::printf("velocity added");
+/*        Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
+        KOKKOS_LAMBDA(const int i, const int j, const int k) {
+
+           if( abs(F(i,j,k,0)) > 1e-6)
+           Kokkos::printf("i %d j %d z %d Fx %f Fy %f Fz %f \n", i,j,k,F(i,j,k,0),F(i,j,k,1),F(i,j,k,2));
+
+       });
+*/
 }
 
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
@@ -830,7 +847,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                          for(int d = 0; d < 3; d++)
                                      	    vel_loc(i,si-ii+1,sj-jj+1,sk-kk+1,d) -= K[d];
 
-                                          Kokkos::printf("Kx %f xg %f yg %f zg %f i %d \n", K[0],xg[0],xg[1],xg[2],i); 
+//                                          Kokkos::printf("Kx %f xg %f yg %f zg %f i %d \n", K[0],xg[0],xg[1],xg[2],i); 
 
                                      } 
                                 }
