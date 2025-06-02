@@ -72,7 +72,7 @@ void Conv_fftx(const ExecutionSpace& exec_space, const ProblemManagerType& pm, c
   auto velx = pm.get( Location::Node(),Field::velx() ); 
   Kokkos::deep_copy( velx, 0.0);
   // Kokkos::View<double*> F1D("Fvector", extent*extent*extent);
-  Kokkos::View<double*, Kokkos::CudaSpace> F1D("Fvector", extent*extent*extent);
+  Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> F1D("Fvector", extent*extent*extent);
   
   // Copy data from 4D to 1D using a parallel loop
   //  Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0, 0, 0, 0}, {extent, extent, extent, 1}), 
@@ -125,7 +125,7 @@ printf("access F1D after parallel");
 //     }
 
 // GPU domain double F1D
-Kokkos::View<double*, Kokkos::CudaSpace> F1D_domaindouble("Fdomaindouble", domaindouble_x*domaindouble_y*domaindouble_z);
+Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> F1D_domaindouble("Fdomaindouble", domaindouble_x*domaindouble_y*domaindouble_z);
 
    Kokkos::printf("update F1D");
 
@@ -230,7 +230,7 @@ Kokkos::View<double*, Kokkos::CudaSpace> F1D_domaindouble("Fdomaindouble", domai
   }
   Kokkos::printf("host access");
   // Creating a device view to deep copy host_LGF values 
-  Kokkos::View<double*, Kokkos::CudaSpace> dev_LGF("d_view", domaindouble_x * domaindouble_y * domaindouble_z);
+  Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> dev_LGF("d_view", domaindouble_x * domaindouble_y * domaindouble_z);
   // deepcopy host to device
   Kokkos::printf("dev lgf");
   Kokkos::deep_copy(dev_LGF, host_LGF);
@@ -243,8 +243,8 @@ Kokkos::View<double*, Kokkos::CudaSpace> F1D_domaindouble("Fdomaindouble", domai
 
   // Defining data vectors required for forward DFT in FFTX as Kokkos views
   using Complex = Kokkos::complex<double>;
-  Kokkos::View<Complex*, Kokkos::CudaSpace> symbol("symbol_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
-  Kokkos::View<double*, Kokkos::CudaSpace> dummy1("dummy1_view", domaindouble_x * domaindouble_y * domaindouble_z);
+  Kokkos::View<Complex*, Kokkos::DefaultExecutionSpace::memory_space> symbol("symbol_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
+  Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> dummy1("dummy1_view", domaindouble_x * domaindouble_y * domaindouble_z);
  
   std::vector<void*> args1 = [&]() {
       static auto symbol_data = symbol.data();
@@ -298,23 +298,23 @@ Kokkos::View<double*, Kokkos::CudaSpace> F1D_domaindouble("Fdomaindouble", domai
 //**************** Using Individual FFTX functions for Convolution *******//
 
  // Defining data vectors required for forward DFT of the input2 ie F1D in FFTX as Kokkos views
-  Kokkos::View<Complex*, Kokkos::CudaSpace> F_dft("fwd_dft_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
-  Kokkos::View<double*, Kokkos::CudaSpace> dummy2("dummy2_view", domaindouble_x * domaindouble_y * domaindouble_z);
-  Kokkos::View<Complex*, Kokkos::CudaSpace> pointwise_mul("fwd_dft_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
-  Kokkos::View<double*, Kokkos::CudaSpace> out_idft("inv_dft_view", domaindouble_x * domaindouble_y * domaindouble_z);
-  Kokkos::View<double*, Kokkos::CudaSpace> dummy3("dummy3_view", domaindouble_x * domaindouble_y * domaindouble_z);
-  Kokkos::View<double*, Kokkos::CudaSpace> out_normalize("norm_output_view", domaindouble_x * domaindouble_y * domaindouble_z);
-  Kokkos::View<double*, Kokkos::CudaSpace> conv_output("Final exatracted output", extent * extent * extent);
+  Kokkos::View<Complex*,Kokkos::DefaultExecutionSpace::memory_space> F_dft("fwd_dft_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
+  Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> dummy2("dummy2_view", domaindouble_x * domaindouble_y * domaindouble_z);
+  Kokkos::View<Complex*,Kokkos::DefaultExecutionSpace::memory_space> pointwise_mul("fwd_dft_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
+  Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> out_idft("inv_dft_view", domaindouble_x * domaindouble_y * domaindouble_z);
+  Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> dummy3("dummy3_view", domaindouble_x * domaindouble_y * domaindouble_z);
+  Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> out_normalize("norm_output_view", domaindouble_x * domaindouble_y * domaindouble_z);
+  Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> conv_output("Final exatracted output", extent * extent * extent);
 
 
   for(int d = 0; d < 3; d++){
-  Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}),
+  Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space,{0, 0, 0}, {extent, extent, extent}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
             int index = i * extent * extent + j * extent + k;
             F1D(index) = F(i, j, k, d);
         });
 
-  Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}),
+  Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space,{0, 0, 0}, {extent, extent, extent}),
            KOKKOS_LAMBDA(const int k, const int j, const int i) {
             int index_dd = (k + extent)*4*extent*extent + (j + extent)*2*extent + i + extent;
             int index_1d = k * extent * extent + j * extent + i;
@@ -346,7 +346,7 @@ Kokkos::View<double*, Kokkos::CudaSpace> F1D_domaindouble("Fdomaindouble", domai
 
 // Pointwise Mulitply
 
-Kokkos::parallel_for("Pointwise_multiply", Kokkos::RangePolicy<Kokkos::Cuda>(0,domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1)), 
+Kokkos::parallel_for("Pointwise_multiply", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1)), 
         KOKKOS_LAMBDA(const int i) {
             double a = symbol(i).real();
             double b = symbol(i).imag();
@@ -394,7 +394,7 @@ Kokkos::printf(" c2rdft");
 // Normalization Factor
 double norm_factor = pow(h,3)/(domaindouble_x * domaindouble_y * domaindouble_z);
 // printf("norm factor = %f\n", norm_factor);
-Kokkos::parallel_for("Normalize output", Kokkos::RangePolicy<Kokkos::Cuda>(0,domaindouble_x * domaindouble_y * domaindouble_z), 
+Kokkos::parallel_for("Normalize output", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * domaindouble_z), 
         KOKKOS_LAMBDA(const int i) {
 
             out_normalize[i] = norm_factor * out_idft[i];
@@ -402,7 +402,7 @@ Kokkos::parallel_for("Normalize output", Kokkos::RangePolicy<Kokkos::Cuda>(0,dom
         });
 
 Kokkos::printf("normalize");
-Kokkos::parallel_for("Normalize output", Kokkos::MDRangePolicy<Kokkos::Cuda, Kokkos::Rank<3>>({0, 0, 0}, {extent, extent, extent}), 
+Kokkos::parallel_for("Normalize output", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space, {0, 0, 0}, {extent, extent, extent}), 
         KOKKOS_LAMBDA(const int k, const int j, const int i) {
             int out_dd_index = k * domaindouble_y * domaindouble_x + j * domaindouble_x + i;
             int out_original_index = k * extent * extent + j * extent + i;
