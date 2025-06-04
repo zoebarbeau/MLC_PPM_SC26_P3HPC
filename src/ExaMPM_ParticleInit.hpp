@@ -35,7 +35,6 @@ void filterEmpties( const ExecutionSpace& exec_space,
     
     // Determine the empty particle positions in the compaction zone.
     int num_particles = particles.size();
-    std::cout << " num particles at start " << num_particles << std::endl;
     Kokkos::View<int*, memory_space> empties(
         Kokkos::ViewAllocateWithoutInitializing( "empties" ),
         std::min( num_particles - local_num_create, local_num_create ) );
@@ -49,7 +48,6 @@ void filterEmpties( const ExecutionSpace& exec_space,
                     empties( count ) = i;
                 }
                 ++count;
-                Kokkos::printf(" count %d ", count);
             }
         } );
 
@@ -73,13 +71,10 @@ void filterEmpties( const ExecutionSpace& exec_space,
             }
         } );
 
-    std::cout << " pre resize " << std::endl;
     particles.resize( local_num_create );
 
-    std::cout << " pre shrink " << std::endl;
     particles.shrinkToFit();
 
-   std::cout << " num particles after shrink " << particles.size()<< std::endl;
 }
 
 //---------------------------------------------------------------------------//

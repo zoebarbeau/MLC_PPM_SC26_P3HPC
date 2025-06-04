@@ -521,7 +521,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                    }
  */
 
-            assert(imax - imin <= 9 && jmax - jmin <= 9 && kmax - kmin <= 9);   
+//          assert(imax - imin <= 9 && jmax - jmin <= 9 && kmax - kmin <= 9);   
 	    auto offset = Pi_list.binOffset(ii,jj,kk);
             auto size   = Pi_list.binSize(ii,jj,kk);
 	    // Iterate over Ci
@@ -563,7 +563,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                    }
 
                                    
-//                                       Kokkos::printf(" velocity %f x %f y %f z %f i %d \n", velocity_g(ci,cj,ck,0),xg[0],xg[1],xg[2],i);
+//                                       Kokkos::printf(" velocity %f x %f y %f z %f i %d \n", K[0],xg[0],xg[1],xg[2],i);
                                  
                                         velx(ci,cj,ck,0) +=K[0];
 
@@ -681,8 +681,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 //          pm.save_F("Fy_", 1, 0);
 
-        int N = extent;
-        Kokkos::printf("velocity added");
+//        int N = extent;
+//        Kokkos::printf("velocity added");
 /*        Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
 
@@ -916,7 +916,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
         });
 
 
-     pm.save_v( "Post_Correction_V",1,0.0);    
+//     pm.save_v( "Post_Correction_V",1,0.0);    
         
 
 }
@@ -975,7 +975,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
           //Find neighbors and calculate interaction for all particles
 	  Cabana::neighbor_parallel_for(Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, pm.numParticle() ), interaction, neigh_list, Cabana::FirstNeighborsTag(), Cabana::SerialOpTag(), "LocalCorrections" );
 
-        std::cout << " num particles " << pm.numParticle() << std::endl;
+/*        std::cout << " num particles " << pm.numParticle() << std::endl;
 
         Kokkos::parallel_for(
         "print_velocity",
@@ -1016,7 +1016,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
         });
 
-
+*/
 } 
 
 
@@ -1101,7 +1101,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
        },L2_final);
 
     L2_final = sqrt(L2_final);
-    Kokkos::printf(" L2 grid error %f max grid %f \n", L2_final);
+    std::cout << "L2 GRID = " << std::setprecision(12) << L2_final << std::endl;
+//  Kokkos::printf(" L2 grid error %f max grid %f \n", L2_final);
 
 
    double L2_pfinal=0.0;
@@ -1149,8 +1150,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
      L2_pfinal = sqrt(L2_pfinal);
 
-     Kokkos::printf(" L2 particle error %f  \n", L2_pfinal);
-
+//     Kokkos::printf(" L2 particle error %f  \n", L2_pfinal);
+std::cout << "L2 P = " << std::setprecision(12) << L2_pfinal << std::endl;
 }
 
  template <class ProblemManagerType, class ExecutionSpace>

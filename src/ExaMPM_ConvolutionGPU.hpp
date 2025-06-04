@@ -127,8 +127,7 @@ printf("access F1D after parallel");
 // GPU domain double F1D
 Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> F1D_domaindouble("Fdomaindouble", domaindouble_x*domaindouble_y*domaindouble_z);
 
-   Kokkos::printf("update F1D");
-
+Kokkos::Timer timer;
   // Lattice Green's function
   std::ifstream infileLGF("/g/g16/barbeau2/CPU/MLC_PPM/LatticeGreensFunction/exec/G_128_Octant");
   std::vector<double> lgf_values(domaindouble_x * domaindouble_y * domaindouble_z);
@@ -219,28 +218,27 @@ Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> F1D_domaindou
 
   // }
 
-  Kokkos::printf("read in file");
   // Creating a host view for the LGF values
   Kokkos::View<double*, Kokkos::HostSpace> host_LGF("h_view", domaindouble_x * domaindouble_y * domaindouble_z);
-  Kokkos::printf("host view");
   // Copying/storing lgf_values into the host view
   for(int i = 0; i < (domaindouble_x * domaindouble_y * domaindouble_z); i++){
     host_LGF[i] = lgf_values.data()[i];
     // std::cout<<"i = "<< i<<",\t host_LGF = " << host_LGF[i] <<",\t" << lgf_values.data()[i] << std::endl;
   }
-  Kokkos::printf("host access");
   // Creating a device view to deep copy host_LGF values 
   Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> dev_LGF("d_view", domaindouble_x * domaindouble_y * domaindouble_z);
   // deepcopy host to device
-  Kokkos::printf("dev lgf");
   Kokkos::deep_copy(dev_LGF, host_LGF);
 
-  Kokkos::printf(" host space file");
+  double timerReadIn = timer.seconds();
+  std::cout << " time to readIn = " << timerReadIn << std::endl;
   // Kokkos::parallel_for("Print symbol", Kokkos::RangePolicy<Kokkos::Cuda>(0, domaindouble_x * domaindouble_y * domaindouble_z), 
   //       KOKKOS_LAMBDA(const int i) {
   //           printf("device lgf[%d] = %f\n", i, dev_LGF[i]);
   //       });
 
+
+//Kokkos::Timer timer();
   // Defining data vectors required for forward DFT in FFTX as Kokkos views
   using Complex = Kokkos::complex<double>;
   Kokkos::View<Complex*, Kokkos::DefaultExecutionSpace::memory_space> symbol("symbol_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
@@ -261,7 +259,6 @@ Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> F1D_domaindou
     MDPRDFTProblem r2cdft{args1, sizes, "mdprdft"};
     r2cdft.transform();
 
- Kokkos::printf("r2cdft");
 //  for(int i0 = 0; i0 < domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1); i0++){      
 //         std::cout << " i0 = ," << i0 << " " << symbol[i0] << std::endl;        
 //     }
@@ -361,7 +358,6 @@ Kokkos::parallel_for("Pointwise_multiply", Kokkos::RangePolicy<ExecutionSpace>(e
             // printf("pwise[%d] = (%f,%f)\n", i, pointwise_mul(i).real(), pointwise_mul(i).imag());
         });
 
-Kokkos::printf("pt wise multiply");
 // Calculate the inverse dft to compute the final convolution value
 std::vector<void*> args3 = [&]() {
       static auto out_data = out_idft.data();
@@ -376,7 +372,6 @@ std::vector<void*> args3 = [&]() {
     std::vector<int> sizes3{domaindouble_x, domaindouble_y, domaindouble_z};
     IMDPRDFTProblem c2rdft{args3, sizes3, "imdprdft"};
     c2rdft.transform();
-Kokkos::printf(" c2rdft");
     // Kokkos::parallel_for("Print inv output", Kokkos::RangePolicy<Kokkos::Cuda>(0, domaindouble_x * domaindouble_y * domaindouble_z), 
     //     KOKKOS_LAMBDA(const int i) {
     //         // printf("i = %d", i);
@@ -401,7 +396,7 @@ Kokkos::parallel_for("Normalize output", Kokkos::RangePolicy<ExecutionSpace>(exe
             // Kokkos::printf("out_normalize[%d] = %f\n", i, out_normalize[i]);
         });
 
-Kokkos::printf("normalize");
+//double timeConv = timer.seconds();
 Kokkos::parallel_for("Normalize output", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space, {0, 0, 0}, {extent, extent, extent}), 
         KOKKOS_LAMBDA(const int k, const int j, const int i) {
             int out_dd_index = k * domaindouble_y * domaindouble_x + j * domaindouble_x + i;
@@ -409,13 +404,11 @@ Kokkos::parallel_for("Normalize output", Kokkos::MDRangePolicy<ExecutionSpace, K
             conv_output[out_original_index] = out_normalize[out_dd_index];
 //            printf("conv_output[%d] = %f\n", out_original_index, conv_output[out_original_index]);
         });
-Kokkos::printf("normalize output");
 auto velocity_g = pm.get(Location::Node(), Field::Velocity());
 
 int N = extent;
 double U = 1.0;
 
-Kokkos::printf(" dimension %d", d);
 
 /*    if(d == 2){
 
@@ -442,7 +435,7 @@ Kokkos::printf("velocity added");
           double R3 = 0.25*0.25*0.25;
           double xz = x[0]*x[2];
           double yz = x[1]*x[2];
-          if( r < (0.25-1e-10) ){
+/*          if( r < (0.25-1e-10) ){
 
             v_exact[0] = -1.5*xz/R2*U;
             v_exact[1] = -1.5*yz/R2*U;
@@ -454,7 +447,7 @@ Kokkos::printf("velocity added");
             v_exact[2] = U*( 1.0 + R3 / (2.0*pow( r, 3.0 ) ) ) - U*1.5*R3 / (  pow( r, 5.0 ) ) * x[2]*x[2] ;
 
          }
-
+*/
 
           if(d == 2 ){
             velocity_g(i,j,k,d) = conv_output[index_f] ;
@@ -475,9 +468,9 @@ Kokkos::printf("velocity added");
 
    });
 
-   Kokkos::printf("error");
-   std::stringstream ss;
-   ss << d << "_Velocity";
+//   Kokkos::printf("error");
+//   std::stringstream ss;
+//   ss << d << "_Velocity";
 //   pm.save_v( ss.str(),1,0.0);
 //   pm.save_v("velocity_0",1,0.0);
 

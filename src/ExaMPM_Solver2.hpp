@@ -93,10 +93,10 @@ class Solver : public SolverBase
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
         // 
-	corr_radius = 4;
+        corr_radius = 4;
         //Real Particle Lists
 	//5x5x5 linked cell stencil
-        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
+        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/4.0);
 
 	//1x1x1 linked cell stencil
         _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
@@ -121,7 +121,7 @@ class Solver : public SolverBase
      //   std::cout << "get pos nump " << nump << " numDO " << num_D0 << " cellsize " << cell_size <<" GLOBAL NUM CELL " << global_num_cell[0] << std::endl;
 	// 5x5x5 grid particle list
 
-        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
+        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/4.0);
        
         //1x1x1 grid particle list
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);
@@ -142,33 +142,43 @@ class Solver : public SolverBase
 
 
 
+        Kokkos::Timer timer;
         LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
-        Kokkos::printf("write stuff");
+        double timeD = timer.seconds();
+        timer.reset();
+
         Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"FyREAL",1,0,  *(_pm->_Fx));       
         Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"Single_velocity_0",1,0,  *(_pm->_velx));
-  
-//      for(int d = 0; d < 3; d++){
+        //      for(int d = 0; d < 3; d++){
 
-        Kokkos::printf("preconv");
+        timer.reset();
         ConvolutionGPU::Conv_fftx(ExecutionSpace(), *_pm,extent,center,cell_size);
-        Kokkos::printf("conv");
+        double timeC = timer.seconds();        
       //    LocalCorrection::ConvFFTW(ExecutionSpace(), *_pm,extent,cell_size,d);    
         std::stringstream name;
         name << 2 << "_velocity";
         const std::string prefix = name.str();
-        Kokkos::printf("before bov");
-         Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix,1,0,  *(_pm->_velx));
-        Kokkos::printf("after BOV");
+        Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix,1,0,  *(_pm->_velx));
 
 
+       timer.reset();
        LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                      extent,center,cell_size, hp, corr_radius);
 
-       std::cout << "interpolation " << std::endl; 
-       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
-       std::cout << " Nbody " << std::endl;  
+       double timeCo = timer.seconds();
 
+       timer.reset();
+       LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
+       double timeI = timer.seconds();
        LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
+
+       std::cout << " Deposition = " << std::setprecision(12) << timeD << std::endl;
+       std::cout << " Convolution = " << std::setprecision(12) << timeC << std::endl;
+       std::cout << " Corrections = " << std::setprecision(12) << timeCo << std::endl;
+       std::cout << " Interactions = " << std::setprecision(12) << timeI << std::endl;
+     
+   
+ 
 //         LocalCorrection::Error_V2( ExecutionSpace(), *_pm, extent, cell_size, hp);
       
 /*       for(int d = 0; d < 3; d++){
