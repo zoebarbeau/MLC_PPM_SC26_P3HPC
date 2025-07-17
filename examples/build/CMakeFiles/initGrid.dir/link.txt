@@ -1,0 +1,1 @@
+/usr/tce/packages/gcc/gcc-8.3.1/bin/g++  -g  -rdynamic CMakeFiles/initGrid.dir/init_grid.o  -o initGrid -lexampm -ldl -lnvrtc -lfftx_dftbat_gpu -lfftx_idftbat_gpu -lfftx_imddft_gpu -lfftx_imdprdft_gpu -lfftx_iprdftbat_gpu -lfftx_mddft_gpu -lfftx_mdprdft_gpu -lfftx_mpi -lfftx_prdftbat_gpu -lfftx_rconv_gpu 

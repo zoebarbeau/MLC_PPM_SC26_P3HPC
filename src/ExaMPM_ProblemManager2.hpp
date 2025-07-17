@@ -35,6 +35,12 @@ struct Node
 struct Particle
 {
 };
+struct Particle0
+{
+};
+struct ParticleK
+{
+};
 } // end namespace Location
 
 //---------------------------------------------------------------------------//
@@ -96,6 +102,7 @@ class ProblemManager
 
     std::shared_ptr<mesh_type> _pmesh,_mesh;
     std::shared_ptr<node_array> _velx,_Fx;
+    particle_list _particles,_particles0,_particlesK;
 
     template <class InitFunc, class ExecutionSpace>
     ProblemManager( const ExecutionSpace& exec_space,
@@ -108,6 +115,8 @@ class ProblemManager
 	, _pmesh( pmesh )  
         , _cell_size( cell_size )
         , _particles( "particles" )
+        , _particlesK("particlesK")
+        , _particles0("particles0")
 	, _ppc( particles_per_cell)
         , _center(center)
 	, _hp(hp)
@@ -118,6 +127,13 @@ class ProblemManager
                              particles_per_cell, create_functor, _particles,
 		             _center, _hp,_extentp);
 
+        initializeParticles( exec_space, *( _pmesh->localGrid() ),
+                             particles_per_cell, create_functor, _particles0,
+                             _center, _hp,_extentp); 
+
+        initializeParticles( exec_space, *( _pmesh->localGrid() ),
+                             particles_per_cell, create_functor, _particlesK,
+                             _center, _hp,_extentp);
 	std::cout << " hp particle " << hp << std::endl;
 	std::cout << " _center particle " << _center << std::endl;
 
@@ -161,6 +177,9 @@ class ProblemManager
         std::array<std::string, 4> names;
         names[0] = "F"; names[1] = "lap_u";
         names[2] = "pre_corr_v"; names[3] = "post_corr_v";
+
+//      Cabana::deep_copy(_particles0,_particles);
+//     Cabana::deep_copy(_particlesK,_particles);
         // create an array and store the name of each variable:
 
 	// Particle Deposition Grid Layout
@@ -194,6 +213,55 @@ class ProblemManager
         return Cabana::slice<3>( _particles, "vorticity_advect" );
     }
 
+
+    typename particle_list::template member_slice_type<1>
+    get( Location::ParticleK, Field::Velocity ) const
+    {
+        return Cabana::slice<1>( _particlesK, "velocity" );
+    }
+
+    typename particle_list::template member_slice_type<2>
+    get( Location::ParticleK, Field::Position ) const
+    {
+        return Cabana::slice<2>( _particlesK, "position" );
+    }
+
+    typename particle_list::template member_slice_type<0>
+    get( Location::ParticleK, Field::Vorticity ) const
+    {
+        return Cabana::slice<0>( _particlesK, "vorticity" );
+    }
+
+     typename particle_list::template member_slice_type<3>
+    get( Location::ParticleK, Field::Vorticity_Advect ) const
+    {
+        return Cabana::slice<3>( _particlesK, "vorticity_advect" );
+    }
+
+
+    typename particle_list::template member_slice_type<1>
+    get( Location::Particle0, Field::Velocity ) const
+    {
+        return Cabana::slice<1>( _particles0, "velocity" );
+    }
+
+    typename particle_list::template member_slice_type<2>
+    get( Location::Particle0, Field::Position ) const
+    {
+        return Cabana::slice<2>( _particles0, "position" );
+    }
+
+    typename particle_list::template member_slice_type<0>
+    get( Location::Particle0, Field::Vorticity ) const
+    {
+        return Cabana::slice<0>( _particles0, "vorticity" );
+    }
+
+     typename particle_list::template member_slice_type<3>
+    get( Location::Particle0, Field::Vorticity_Advect ) const
+    {
+        return Cabana::slice<3>( _particles0, "vorticity_advect" );
+    }
 
     typename node_array::view_type get( Location::Node, Field::Vorticity ) const
     {
@@ -274,6 +342,29 @@ class ProblemManager
 
     }	    
 
+    void initRK4( )
+    {
+
+/*      auto p_1 = Cabana::slice<0>( _particles);
+!       auto p_2 = Cabana::slice<1>( _particles);
+        auto p_3 = Cabana::slice<2>( _particles);
+        auto p_4 = Cabana::slice<3>( _particles);
+        Cabana::deep_copy(p_1, 0.0);
+        Cabana::deep_copy(p_2, 0.0);
+        Cabana::deep_copy(p_3, 0.0);
+        Cabana::deep_copy(p_4, 0.0);
+*/
+        auto q_1 = Cabana::slice<0>( _particlesK);
+        auto q_2 = Cabana::slice<1>( _particlesK);
+        auto q_3 = Cabana::slice<2>( _particlesK);
+        auto q_4 = Cabana::slice<3>( _particlesK);
+        Cabana::deep_copy(q_1, 0.0);
+        Cabana::deep_copy(q_2, 0.0);
+        Cabana::deep_copy(q_3, 0.0);
+        Cabana::deep_copy(q_4, 0.0);
+    }
+
+   
     KOKKOS_INLINE_FUNCTION
     void save_F(std::string run_name, const int timesteps_done, const double time) const
     {   std::stringstream name;
@@ -300,7 +391,6 @@ class ProblemManager
   private:
     double _amp, _cell_size,_hp, _center, _extent, _extentp;
     int _ppc;
-    particle_list _particles;
     std::shared_ptr<node_array> _vorticity, _F;
     std::shared_ptr<node_array> _velocity,_velocity_corr,_vorticity_hp;
     std::shared_ptr<halo> _node_scatter_halo;

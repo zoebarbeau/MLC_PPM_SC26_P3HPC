@@ -41,12 +41,12 @@ struct ParticleInitFunc
 	s = pow( pow(r-0.5, 2.0) + pow(x[2], 2.0), 0.5);
         q = pow( pow(x[0]-0.5, 2.0) + pow(x[1]-0.5,2.0) + pow(x[2]-0.5, 2.0),  0.5);
 
-       loc =  pow( pow(x[0] - 0.55, 2.0) + pow(x[1] -0.55,2.0) + pow(x[2] -0.55, 2.0),  0.5);
+       loc =  pow( pow(x[0] - 0.53125, 2.0) + pow(x[1] - 0.53125,2.0) + pow(x[2] - 0.53125, 2.0),  0.5);
         R = 0.5;
         U = 1.0;
 
 
-/*         if( loc <=1e-6){
+         if( loc <=1e-6){
               vortz = 0.0;
               vortx = 0.0; //15.0*U/(2.0*R*R)*x[1];
               vorty = 0.0; //-15.0*U/(2.0*R*R)*x[0];
@@ -65,7 +65,7 @@ struct ParticleInitFunc
                     Cabana::get<2>( p, d ) = x[d]; //+0.2*_hp; // + 0.125; //0.5*_h;
                return true;
          }       
-*/ 
+ 
          if( q <= pow(10,-6.0)){
 	      vortz = 0.0;
               vortx = 0.0; //15.0*U/(2.0*R*R)*x[1];
@@ -83,7 +83,7 @@ struct ParticleInitFunc
 
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d]+0.1*_h; // + 0.125; //0.5*_h;
+                 Cabana::get<2>( p, d ) = x[d]; // + 0.125; //0.5*_h;
 
                  Kokkos::printf(" x %f y %f z %f \n", x[0],x[1],x[2]);
 	      return true;
@@ -132,7 +132,7 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     bc.boundary[3] = ExaMPM::BoundaryType::NO_SLIP;
     bc.boundary[4] = ExaMPM::BoundaryType::NO_SLIP;
     bc.boundary[5] = ExaMPM::BoundaryType::NO_SLIP;
-    double t_final = 1.0;
+    double t_final = 0.00078125;
     int write_freq = 1;
     // Solve the problem.
     auto solver = ExaMPM::createSolver(

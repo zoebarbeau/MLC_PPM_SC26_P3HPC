@@ -293,7 +293,7 @@ Kokkos::Timer timer;
 //--------------------------------------------------------------//
 
 //**************** Using Individual FFTX functions for Convolution *******//
-
+timer.reset();
  // Defining data vectors required for forward DFT of the input2 ie F1D in FFTX as Kokkos views
   Kokkos::View<Complex*,Kokkos::DefaultExecutionSpace::memory_space> F_dft("fwd_dft_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
   Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> dummy2("dummy2_view", domaindouble_x * domaindouble_y * domaindouble_z);
@@ -305,6 +305,7 @@ Kokkos::Timer timer;
 
 
   for(int d = 0; d < 3; d++){
+  timer.reset();
   Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space,{0, 0, 0}, {extent, extent, extent}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
             int index = i * extent * extent + j * extent + k;
@@ -422,6 +423,11 @@ Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0,
      });
 }
 */
+
+ Kokkos::fence();
+ double timerFFTX = timer.seconds();
+ std::cout << timerFFTX << " FFTX " << std::endl;
+
 Kokkos::printf("velocity added");
      Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
@@ -452,8 +458,8 @@ Kokkos::printf("velocity added");
           if(d == 2 ){
             velocity_g(i,j,k,d) = conv_output[index_f] ;
             velx(i,j,k,0)  = (conv_output[index_f]);
-            velocity_g(i,j,k,d) += 1.0;
-            velx(i,j,k,0)  += 1.0;
+//            velocity_g(i,j,k,d) += 1.0;
+//            velx(i,j,k,0)  += 1.0;
           }else if(d == 1){
 
             velocity_g(i,j,k,d) = conv_output[index_f];
@@ -474,8 +480,8 @@ Kokkos::printf("velocity added");
 //   pm.save_v( ss.str(),1,0.0);
 //   pm.save_v("velocity_0",1,0.0);
 
-  }
 
+  }
 
 
 

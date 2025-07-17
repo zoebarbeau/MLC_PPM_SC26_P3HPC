@@ -577,7 +577,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                   }
 
                 
-                if( counter > 0 ){
+             if( counter > 0 ){
                  
 	         for( int c0i = imin+1; c0i < imax-1; c0i++)
                    for( int c0j = jmin+1; c0j < jmax-1; c0j++)
@@ -903,11 +903,13 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                     //Interpolate from Grid to Particle
               	    // g contains cell size information
                     MLC_Interp::HarmonicValue( vel_loc, g, xp, u_temp,i );
-         //          MLC_Interp::HarmonicValue( velocity_corr, g, x_plus, u_plus );
-	 //          MLC_Interp::HarmonicValue( velocity_corr, g, x_minus, u_minus );
+                    MLC_Interp::HarmonicValue( vel_loc, g, x_plus, u_plus,i );
+	            MLC_Interp::HarmonicValue( vel_loc, g, x_minus, u_minus,i );
                     //Update RHS
-                    for(int d = 0; d < 3; d++)
+                    for(int d = 0; d < 3; d++){
                        velocity_p(p,d) = u_temp[d];
+                       advect_vort(p,d) = ( u_plus[d] - u_minus[d] ) / hp;
+                    }
                    }		    
 		 }
              
@@ -958,15 +960,15 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
         //Evaluate Green's Function with number
         GreensFunction::Calculate_qK(x, xq, vort, K,cell_size,corr_radius);
-//	GreensFunction::Calculate_qK(xp_minus, xq, vort, K_minus,cell_size);
-//	GreensFunction::Calculate_qK(xp_plus, xq, vort, K_plus,cell_size);
+	GreensFunction::Calculate_qK(xp_minus, xq, vort, K_minus,cell_size,corr_radius);
+	GreensFunction::Calculate_qK(xp_plus, xq, vort, K_plus,cell_size,corr_radius);
 
 
 	//Correct Velocity at P with Local Neighbor Interaction at Q
         for(int d = 0; d < 3; d++)
         {
               u_p(p,d) += K[d];
-//	      advect_vorticity(p,d) += ( K_plus[d] - K_minus[d] )/ hp;
+	      advect_vorticity(p,d) += ( K_plus[d] - K_minus[d] )/ hp;
         }
 
                 
@@ -975,7 +977,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
           //Find neighbors and calculate interaction for all particles
 	  Cabana::neighbor_parallel_for(Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, pm.numParticle() ), interaction, neigh_list, Cabana::FirstNeighborsTag(), Cabana::SerialOpTag(), "LocalCorrections" );
 
-/*        std::cout << " num particles " << pm.numParticle() << std::endl;
+/*      std::cout << " num particles " << pm.numParticle() << std::endl;
 
         Kokkos::parallel_for(
         "print_velocity",
@@ -1012,11 +1014,12 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
               v_error[d] = v_exact[d] - u_p(i,d); 
             }
                  
-          Kokkos::printf(" p %d, u %f v %f w %f  uex %f vex %f wex %f x %f y %f z %f \n",i,u_p(i,0),u_p(i,1), u_p(i,2), v_exact[0], v_exact[1], v_exact[2],x[0],x[1],x[2]);
+  //        Kokkos::printf(" p %d, u %f v %f w %f  uex %f vex %f wex %f x %f y %f z %f \n",i,u_p(i,0),u_p(i,1), u_p(i,2), v_exact[0], v_exact[1], v_exact[2],x[0],x[1],x[2]);
+//             Kokkos::printf(" u_p %e advection vorticity %e \n", u_p(i,0),advect_vorticity(i,0) );
 
         });
-
 */
+
 } 
 
 
@@ -1027,8 +1030,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
   int N = extent;
   auto velocity_g = pm.get(Location::Node(), Field::Velocity());    
-  auto u_p = pm.get( Location::Particle(), Field::Velocity() );
-  auto x_p = pm.get( Location::Particle(), Field::Position() );
+  auto u_p = pm.get( Location::Particle0(), Field::Velocity() );
+  auto x_p = pm.get( Location::Particle0(), Field::Position() );
 
   double max_final = 0, L2_final = 0;
 
@@ -1144,7 +1147,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 //           maxp = vm;
      
     
- 
+           Kokkos::printf("p %d u %e v %e w %e x %e y %e z %e \n ", i,u_p(i,0),u_p(i,1),u_p(i,2),x_p(i,0),x_p(i,1),x_p(i,2) );
 
      },L2_pfinal);
 

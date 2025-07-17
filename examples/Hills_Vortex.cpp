@@ -112,7 +112,7 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     bc.boundary[3] = ExaMPM::BoundaryType::NO_SLIP;
     bc.boundary[4] = ExaMPM::BoundaryType::NO_SLIP;
     bc.boundary[5] = ExaMPM::BoundaryType::NO_SLIP;
-    double t_final = 1.0;
+    double t_final =  0.005; 
     int write_freq = 1;
     // Solve the problem.
     auto solver = ExaMPM::createSolver(
