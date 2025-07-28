@@ -20,12 +20,12 @@
 #include <ExaMPM_LocalCorrection.hpp>
 #include <ExaMPM_GridManager.hpp>
 #include <ExaMPM_Remap.hpp>
-#include <ExaMPM_ConvolutionGPU.hpp>
 #include <memory>
 #include <string>
 #include <ExaMPM_Remap.hpp>
 #include <ExaMPM_RK4.hpp>
 #include <mpi.h>
+#include "FFTXLGFConvolution.H"
 namespace ExaMPM
 {
 //---------------------------------------------------------------------------//
@@ -135,17 +135,22 @@ class Solver : public SolverBase
 
 
 
+        ConvolutionFFTX<ExecutionSpace> FFTXConv(extent,center,cell_size);
+        std::string file="/g/g16/barbeau2/CPU/MLC_PPM/LatticeGreensFunction/exec/G_128_Octant";
+
+        FFTXConv.read_LGF_file(file);
+
         // Output initial state.
        outputParticles();
        _time = 0;
        _dt   =0.0001953125;
        double multiply[4]  = {0.5,0.5,1.0,0.0};
        double increment[4] = {1.0/6.0,1.0/3.0,1.0/3.0,1.0/6.0};
-//       while( _time < t_final ){
+       while( _time < 0.25* _dt ){
 
-//          _pm->initRK4();
-//          RK4::updateP(ExecutionSpace(),*_pm);
-//        for(int i = 0; i < 4; i++){
+          _pm->initRK4();
+          RK4::updateP(ExecutionSpace(),*_pm);
+          for(int i = 0; i < 1; i++){
 
              Kokkos::Timer timer;
              LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
@@ -155,39 +160,42 @@ class Solver : public SolverBase
 //             Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"FyREAL",1,0,  *(_pm->_Fx));       
 //             Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"Single_velocity_0",1,0,  *(_pm->_velx));
               
-             ConvolutionGPU::Conv_fftx(ExecutionSpace(), *_pm,extent,center,cell_size);
+//             ConvolutionGPU::Conv_fftx(ExecutionSpace(), *_pm,extent,center,cell_size);
 
+             FFTXConv.compute_convolution(ExecutionSpace(), *_pm);
              std::stringstream name;
              name << 2 << "_velocity";
              const std::string prefix = name.str();
              Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix,1,0,  *(_pm->_velx));
 
-/*             timer.reset();
+             timer.reset();
              LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                      extent,center,cell_size, hp, corr_radius);
-             Kokkos::fence();
+//             Kokkos::fence();
              double timeCorr = timer.seconds();
 
              timer.reset();
              LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
-             Kokkos::fence();
+//             Kokkos::fence();
              double timeInt = timer.seconds();
-            
+          
 //             RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
-       
+/*    
              std::cout <<"timer deposition = " << timeD << std::endl;
              std::cout <<"timer corrections = " << timeCorr << std::endl;
              std::cout <<"timer interactions = " << timeInt << std::endl;
 */
- //       }
+
+ LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
+       }
 
          _time += _dt; 
          _step += 1;
          outputParticles(); 
-//     }
+     }
      
 
-//        LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
+//     LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
         
 //         LocalCorrection::Error_V2( ExecutionSpace(), *_pm, extent, cell_size, hp);
       

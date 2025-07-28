@@ -1147,7 +1147,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 //           maxp = vm;
      
     
-           Kokkos::printf("p %d u %e v %e w %e x %e y %e z %e \n ", i,u_p(i,0),u_p(i,1),u_p(i,2),x_p(i,0),x_p(i,1),x_p(i,2) );
+//           Kokkos::printf("p %d u %e v %e w %e x %e y %e z %e \n ", i,u_p(i,0),u_p(i,1),u_p(i,2),x_p(i,0),x_p(i,1),x_p(i,2) );
 
      },L2_pfinal);
 
