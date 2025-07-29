@@ -82,7 +82,6 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
           KOKKOS_LAMBDA(const int i, const int j, const int k) {
               int index = i * extent * extent + j * extent + k;
               F1D(index) = F(i, j, k, d);
-              Kokkos::printf(" index %d velocity %f \n", index, F1D(index));
           });
 
       Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space,{0, 0, 0}, {extent, extent, extent}),
@@ -98,6 +97,10 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
       static auto dummy2_data = dummy2.data();
       return std::vector<void*>{&Fdft_data, &F1D_data, &dummy2_data};
       }();
+
+      std::vector<int> sizes2{domaindouble_x, domaindouble_y, domaindouble_z};
+      MDPRDFTProblem r2cdft2{args2, sizes2, "mdprdft"};
+      r2cdft2.transform();
 
 
       Kokkos::parallel_for("Pointwise_multiply", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1)),
@@ -146,6 +149,7 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
      int N = extent;
      double U = 1.0;
 
+     if(d == 2){
      Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
 
@@ -154,14 +158,13 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
               velx(i,j,k,0)       = 1.0;
 
      });
-
+     }
 
 
       Kokkos::fence();
      double timerFFTX = timer.seconds();
      std::cout << timerFFTX << " FFTX " << std::endl;
 
-     Kokkos::printf("velocity added");
        Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           int index_f = i * N * N + j * N + k;
@@ -177,8 +180,8 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
 
           
           if(d == 2 ){
-            velocity_g(i,j,k,d) = conv_output[index_f] ;
-            velx(i,j,k,0)  = (conv_output[index_f]);
+            velocity_g(i,j,k,d) += conv_output[index_f] ;
+            velx(i,j,k,0)  += (conv_output[index_f]);
 
           }else if(d == 1){
 

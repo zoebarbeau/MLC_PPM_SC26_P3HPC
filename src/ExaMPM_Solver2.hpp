@@ -146,11 +146,11 @@ class Solver : public SolverBase
        _dt   =0.0001953125;
        double multiply[4]  = {0.5,0.5,1.0,0.0};
        double increment[4] = {1.0/6.0,1.0/3.0,1.0/3.0,1.0/6.0};
-       while( _time < 0.25* _dt ){
+       while( _time < 15* _dt ){
 
           _pm->initRK4();
           RK4::updateP(ExecutionSpace(),*_pm);
-          for(int i = 0; i < 1; i++){
+          for(int i = 0; i < 4; i++){
 
              Kokkos::Timer timer;
              LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
@@ -179,14 +179,13 @@ class Solver : public SolverBase
 //             Kokkos::fence();
              double timeInt = timer.seconds();
           
-//             RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
+             RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
 /*    
              std::cout <<"timer deposition = " << timeD << std::endl;
              std::cout <<"timer corrections = " << timeCorr << std::endl;
              std::cout <<"timer interactions = " << timeInt << std::endl;
 */
 
- LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
        }
 
          _time += _dt; 

@@ -1030,8 +1030,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
   int N = extent;
   auto velocity_g = pm.get(Location::Node(), Field::Velocity());    
-  auto u_p = pm.get( Location::Particle0(), Field::Velocity() );
-  auto x_p = pm.get( Location::Particle0(), Field::Position() );
+  auto u_p = pm.get( Location::Particle(), Field::Velocity() );
+  auto x_p = pm.get( Location::Particle(), Field::Position() );
 
   double max_final = 0, L2_final = 0;
 
