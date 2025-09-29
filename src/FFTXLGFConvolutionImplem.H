@@ -1,3 +1,17 @@
+void write_view_to_txt(const Kokkos::View<double*, Kokkos::HostSpace>& view,
+                       const std::string& filename) {
+  std::ofstream outfile(filename);
+  if (!outfile.is_open()) {
+    std::cerr << "Unable to open file " << filename << "\n";
+    return;
+  }
+  for (size_t i = 0; i < view.extent(0); ++i) {
+    outfile << i << " " << view(i) << "\n";
+  }
+  outfile.close();
+}
+
+
 template <typename ExecutionSpace>
 void ConvolutionFFTX<ExecutionSpace>::read_LGF_file(const std::string& filename) {
   std::ifstream infileLGF(filename);
@@ -84,6 +98,12 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
               F1D(index) = F(i, j, k, d);
           });
 
+      auto host_F1D = Kokkos::create_mirror_view(F1D);
+      Kokkos::deep_copy(host_F1D, F1D);
+      std::stringstream ss1, ss2;
+      ss1 << "F1D_dir" << d << ".txt";
+      write_view_to_txt(host_F1D, ss1.str());
+
       Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space,{0, 0, 0}, {extent, extent, extent}),
            KOKKOS_LAMBDA(const int k, const int j, const int i) {
             int index_dd = (k + extent)*4*extent*extent + (j + extent)*2*extent + i + extent;
@@ -158,6 +178,8 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
               velx(i,j,k,0)       = 1.0;
 
      });
+
+
      }
 
 
@@ -192,12 +214,17 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
             velocity_g(i,j,k,d) = conv_output[index_f];
             velx(i,j,k,0) =  conv_output[index_f];
 
-//            Kokkos::printf(" index %d velocity %f \n", index_f, conv_output);
+            Kokkos::printf(" index %d velocity %f \n", index_f, conv_output);
           }
 
           });
 
-           //   Kokkos::printf("error");
+          auto host_conv = Kokkos::create_mirror_view(conv_output);
+	  Kokkos::deep_copy(host_conv, conv_output);
+	  ss2 << "convoutput_dir" << d << ".txt";
+          write_view_to_txt(host_conv, ss2.str());
+	  
+            //   Kokkos::printf("error");
               std::stringstream ss;
               ss << d << "_Velocity_trial";
               pm.save_v( ss.str(),1,0.0);

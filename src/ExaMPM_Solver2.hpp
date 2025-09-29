@@ -149,7 +149,7 @@ class Solver : public SolverBase
 
 //          _pm->initRK4();
 //          RK4::updateP(ExecutionSpace(),*_pm);
-          for(int i = 0; i < 15; i++){
+          for(int i = 0; i < 1; i++){
 
              Kokkos::Timer timer;
              LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
@@ -193,7 +193,7 @@ class Solver : public SolverBase
      }
      
 
-//     LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
+     LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
         
 //         LocalCorrection::Error_V2( ExecutionSpace(), *_pm, extent, cell_size, hp);
       

@@ -75,6 +75,8 @@ public:
   void read_LGF_file(const std::string& filename);
   template <class ProblemManagerType>
   void compute_convolution(const ExecutionSpace& exec_space, ProblemManagerType& pm);
+//  void write_view_to_txt(const Kokkos::View<double*, Kokkos::HostSpace>& view,
+//                       const std::string& filename);
 };
 
 #include "FFTXLGFConvolutionImplem.H"
