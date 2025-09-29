@@ -163,7 +163,7 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
 
       Kokkos::fence();
      double timerFFTX = timer.seconds();
-     std::cout << timerFFTX << " FFTX " << std::endl;
+//     std::cout << timerFFTX << std::endl;
 
        Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {

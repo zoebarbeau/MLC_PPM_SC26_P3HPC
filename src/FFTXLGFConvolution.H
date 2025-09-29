@@ -16,11 +16,11 @@
 #include <Kokkos_Core.hpp>
 #include <cmath>
 #include <string>
-#include "fftx3.hpp"
-#include "interface.hpp"
-#include "mdprdftObj.hpp"
-#include "imdprdftObj.hpp"
-#include "rconvObj.hpp"
+#include "fftx.hpp"
+#include "fftxinterface.hpp"
+#include "fftxmdprdftObj.hpp"
+#include "fftximdprdftObj.hpp"
+#include "fftxrconvObj.hpp"
 
 template <typename ExecutionSpace>
 class ConvolutionFFTX {

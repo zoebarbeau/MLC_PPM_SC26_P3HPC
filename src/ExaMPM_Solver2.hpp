@@ -134,35 +134,32 @@ class Solver : public SolverBase
     {   
 
 
-
         ConvolutionFFTX<ExecutionSpace> FFTXConv(extent,center,cell_size);
-        std::string file="/g/g16/barbeau2/CPU/MLC_PPM/LatticeGreensFunction/exec/G_128_Octant";
+        std::string file="/global/homes/z/zbarbeau/ExaMPM/LatticeGreensFunction/exec/G_256_Octant";
 
         FFTXConv.read_LGF_file(file);
-
         // Output initial state.
-       outputParticles();
+//       outputParticles();
+        
        _time = 0;
        _dt   =0.0001953125;
        double multiply[4]  = {0.5,0.5,1.0,0.0};
        double increment[4] = {1.0/6.0,1.0/3.0,1.0/3.0,1.0/6.0};
-       while( _time < 15* _dt ){
+       while( _time <1* _dt ){
 
-          _pm->initRK4();
-          RK4::updateP(ExecutionSpace(),*_pm);
-          for(int i = 0; i < 4; i++){
+//          _pm->initRK4();
+//          RK4::updateP(ExecutionSpace(),*_pm);
+          for(int i = 0; i < 15; i++){
 
              Kokkos::Timer timer;
              LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
              Kokkos::fence();
              double timeD = timer.seconds();
-             std::cout << " Deposition " << std::endl;
-//             Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"FyREAL",1,0,  *(_pm->_Fx));       
-//             Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),"Single_velocity_0",1,0,  *(_pm->_velx));
-              
-//             ConvolutionGPU::Conv_fftx(ExecutionSpace(), *_pm,extent,center,cell_size);
+	     timer.reset();
 
              FFTXConv.compute_convolution(ExecutionSpace(), *_pm);
+	     Kokkos::fence();
+	     double timeF = timer.seconds();
              std::stringstream name;
              name << 2 << "_velocity";
              const std::string prefix = name.str();
@@ -171,26 +168,28 @@ class Solver : public SolverBase
              timer.reset();
              LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                      extent,center,cell_size, hp, corr_radius);
-//             Kokkos::fence();
+             Kokkos::fence();
              double timeCorr = timer.seconds();
-
              timer.reset();
              LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
-//             Kokkos::fence();
+             Kokkos::fence();
              double timeInt = timer.seconds();
           
-             RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
-/*    
-             std::cout <<"timer deposition = " << timeD << std::endl;
-             std::cout <<"timer corrections = " << timeCorr << std::endl;
-             std::cout <<"timer interactions = " << timeInt << std::endl;
-*/
+//             RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
+ 
+	     if( i == 0 ){
+
+                LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
+
+	     }
+             std::cout << timeD << " "<< timeF << " " << timeCorr << " " << timeInt << " " << std::endl;
+
 
        }
 
          _time += _dt; 
          _step += 1;
-         outputParticles(); 
+//         outputParticles(); 
      }
      
 

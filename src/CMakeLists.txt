@@ -23,7 +23,7 @@ ExaMPM_VInterpolation.hpp
 #FFTWLGFConvolutionImplem.H
 #ExaMPM_Convolution_FFTX.H
 FFTXLGFConvolution.H
-FFTXLGFConvolutionImplen.H
+FFTXLGFConvolutionImplem.H
 #ExaMPM_ConvolutionGPU.H
   )
 

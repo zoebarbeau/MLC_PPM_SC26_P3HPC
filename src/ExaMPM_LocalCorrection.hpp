@@ -19,7 +19,7 @@
 #include <ExaMPM_GridManager.hpp>
 #include <Kokkos_Core.hpp>
 #include <cmath>
-#include "FFTWLGFConvolution.H"
+//#include "FFTWLGFConvolution.H"
 namespace ExaMPM
 {
 namespace LocalCorrection
@@ -782,7 +782,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    
    pm.save_v( "Precorrection_V",1,0);
    //Iterate over D0
-   Kokkos::View<double*****> vel_loc("local_velocity",num_grid,3,3,3,3); 
+// Kokkos::View<double*****> vel_loc("local_velocity",num_grid,3,3,3,3); 
    Kokkos::parallel_for(
         "Corrections",
         Kokkos::RangePolicy<ExecutionSpace>( exec_space,0,num_grid ),
@@ -809,14 +809,15 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 	     auto offset = Pi_list.binOffset(ii,jj,kk);
              auto size   = Pi_list.binSize(ii,jj,kk);
-
+             double vel_loc[3][3][3][3]={0};
               for( int si = ii-1; si <= ii+1; si++)
                   for(int sj = jj-1; sj <= jj+1; sj++)
                       for( int sk = kk-1; sk <= kk+1; sk++)
                        {
 
            			  for(int d = 0; d < 3; d++)
-                                     vel_loc(i,si-ii+1,sj-jj+1,sk-kk+1,d) = velocity_g(si,sj,sk,d);
+                                  //   vel_loc(i,si-ii+1,sj-jj+1,sk-kk+1,d) = velocity_g(si,sj,sk,d);
+				  vel_loc[si-ii+1][sj-jj+1][sk-kk+1][d] = velocity_g(si,sj,sk,d);
 
                         }
 
@@ -862,8 +863,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 					 //Correct Velocity
                                          for(int d = 0; d < 3; d++)
-                                     	    vel_loc(i,si-ii+1,sj-jj+1,sk-kk+1,d) -= K[d];
-
+//                                   	    vel_loc(i,si-ii+1,sj-jj+1,sk-kk+1,d) -= K[d];
+                                            vel_loc[si-ii+1][sj-jj+1][sk-kk+1][d] -= K[d];
 //                                          Kokkos::printf("Kx %f xg %f yg %f zg %f i %d \n", K[0],xg[0],xg[1],xg[2],i); 
 
                                      } 
@@ -902,9 +903,13 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                     //Interpolate from Grid to Particle
               	    // g contains cell size information
-                    MLC_Interp::HarmonicValue( vel_loc, g, xp, u_temp,i );
-                    MLC_Interp::HarmonicValue( vel_loc, g, x_plus, u_plus,i );
-	            MLC_Interp::HarmonicValue( vel_loc, g, x_minus, u_minus,i );
+//                    MLC_Interp::HarmonicValue( vel_loc, g, xp, u_temp,i );
+//                    MLC_Interp::HarmonicValue( vel_loc, g, x_plus, u_plus,i );
+//	            MLC_Interp::HarmonicValue( vel_loc, g, x_minus, u_minus,i );
+                    MLC_Interp::HarmonicValue_local( vel_loc, g, xp, u_temp );
+                    MLC_Interp::HarmonicValue_local( vel_loc, g, x_plus, u_plus );
+                    MLC_Interp::HarmonicValue_local( vel_loc, g, x_minus, u_minus );
+
                     //Update RHS
                     for(int d = 0; d < 3; d++){
                        velocity_p(p,d) = u_temp[d];
@@ -1156,7 +1161,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 //     Kokkos::printf(" L2 particle error %f  \n", L2_pfinal);
 std::cout << "L2 P = " << std::setprecision(12) << L2_pfinal << std::endl;
 }
-
+/*
  template <class ProblemManagerType, class ExecutionSpace>
  void ConvFFTW( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const int extent, const double h, const int d )
@@ -1249,7 +1254,8 @@ std::cout << "L2 P = " << std::setprecision(12) << L2_pfinal << std::endl;
    ss << d << "_Velocity";
    pm.save_v( ss.str(),1,0.0);   
 
-}    
+}   
+*/
  template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
  void Test_ReadBack( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const NeighborListType& neigh_list, const int c,const int extent,

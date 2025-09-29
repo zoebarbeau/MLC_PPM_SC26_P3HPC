@@ -399,6 +399,156 @@ KOKKOS_INLINE_FUNCTION
     }
 }
 
+template<class GridDataType >
+KOKKOS_INLINE_FUNCTION
+std::enable_if_t<3 == GridDataType::num_space_dim, void>
+f_local(double local[3][3][3][3], int d,
+        const GridDataType g, double& fx, double& fy, double& fz)
+{
+    int i = 1, j = 1, k = 1; // center of 3x3x3 stencil
+
+    // Calculate FX
+    double sx_p = local[i+1][j][k+1][d] + local[i+1][j][k-1][d]
+                + local[i+1][j+1][k][d] + local[i+1][j-1][k][d];
+    double sx_m = local[i-1][j][k+1][d] + local[i-1][j][k-1][d]
+                + local[i-1][j+1][k][d] + local[i-1][j-1][k][d];
+    fx = (sx_p - sx_m + 2*(local[i+1][j][k][d] - local[i-1][j][k][d]))
+         / (12.0*g.cell_size);
+
+    // Calculate FY
+    double sy_p = local[i][j+1][k+1][d] + local[i][j+1][k-1][d]
+                + local[i+1][j+1][k][d] + local[i-1][j+1][k][d];
+    double sy_m = local[i][j-1][k+1][d] + local[i][j-1][k-1][d]
+                + local[i+1][j-1][k][d] + local[i-1][j-1][k][d];
+    fy = (sy_p - sy_m + 2*(local[i][j+1][k][d] - local[i][j-1][k][d]))
+         / (12.0*g.cell_size);
+
+    // Calculate FZ
+    double sz_p = local[i][j+1][k+1][d] + local[i][j-1][k+1][d]
+                + local[i+1][j][k+1][d] + local[i-1][j][k+1][d];
+    double sz_m = local[i][j+1][k-1][d] + local[i][j-1][k-1][d]
+                + local[i+1][j][k-1][d] + local[i-1][j][k-1][d];
+    fz = (sz_p - sz_m + 2*(local[i][j][k+1][d] - local[i][j][k-1][d]))
+         / (12.0*g.cell_size);
+}
+
+template<class GridDataType >
+KOKKOS_INLINE_FUNCTION
+std::enable_if_t<3 == GridDataType::num_space_dim, void>
+f2_local(double local[3][3][3][3], int d,
+         const GridDataType g,double& fxx,double& fyy,double& fzz,
+         double& fxy,double& fxz,double& fyz)
+{
+    int i = 1, j = 1, k = 1;
+
+    fxx = ( local[i+1][j][k][d] + local[i-1][j][k][d] - 2*local[i][j][k][d] )
+        / (g.cell_size*g.cell_size);
+
+    fyy = ( local[i][j+1][k][d] + local[i][j-1][k][d] - 2*local[i][j][k][d] )
+        / (g.cell_size*g.cell_size);
+
+    fzz = ( local[i][j][k+1][d] + local[i][j][k-1][d] - 2*local[i][j][k][d] )
+        / (g.cell_size*g.cell_size);
+
+    fxy = ( ( local[i+1][j+1][k][d] - local[i-1][j+1][k][d] )
+          - ( local[i+1][j-1][k][d] - local[i-1][j-1][k][d] ) )
+        / (4*g.cell_size*g.cell_size);
+
+    fxz = ( ( local[i+1][j][k+1][d] - local[i-1][j][k+1][d] )
+          - ( local[i+1][j][k-1][d] - local[i-1][j][k-1][d] ) )
+        / (4*g.cell_size*g.cell_size);
+
+    fyz = ( ( local[i][j+1][k+1][d] - local[i][j-1][k+1][d] )
+          - ( local[i][j+1][k-1][d] - local[i][j-1][k-1][d] ) )
+        / (4*g.cell_size*g.cell_size);
+}
+
+template<class GridDataType >
+KOKKOS_INLINE_FUNCTION
+std::enable_if_t<3 == GridDataType::num_space_dim, void>
+f3_local(double local[3][3][3][3], int d,
+         const GridDataType g,double& fxxy,double& fxxz,
+         double& fyyx,double& fyyz,double& fzzx,double& fzzy,double& fxyz)
+{
+    int i = 1, j = 1, k = 1;
+
+    fxyz = ( ( (local[i+1][j+1][k+1][d] - local[i-1][j+1][k+1][d])
+             - (local[i+1][j-1][k+1][d] - local[i-1][j-1][k+1][d]) )
+           - ( (local[i+1][j+1][k-1][d] - local[i-1][j+1][k-1][d])
+             - (local[i+1][j-1][k-1][d] - local[i-1][j-1][k-1][d]) ) )
+           / (8*pow(g.cell_size,3));
+
+    fxxy = ( (local[i+1][j+1][k][d] - 2*local[i][j+1][k][d] + local[i-1][j+1][k][d])
+           - (local[i+1][j-1][k][d] - 2*local[i][j-1][k][d] + local[i-1][j-1][k][d]) )
+           / (2*pow(g.cell_size,3));
+
+    fxxz = ( (local[i+1][j][k+1][d] - 2*local[i][j][k+1][d] + local[i-1][j][k+1][d])
+           - (local[i+1][j][k-1][d] - 2*local[i][j][k-1][d] + local[i-1][j][k-1][d]) )
+           / (2*pow(g.cell_size,3));
+
+    fyyx = ( (local[i+1][j+1][k][d] - 2*local[i+1][j][k][d] + local[i+1][j-1][k][d])
+           - (local[i-1][j+1][k][d] - 2*local[i-1][j][k][d] + local[i-1][j-1][k][d]) )
+           / (2*pow(g.cell_size,3));
+
+    fyyz = ( (local[i][j+1][k+1][d] - 2*local[i][j][k+1][d] + local[i][j-1][k+1][d])
+           - (local[i][j+1][k-1][d] - 2*local[i][j][k-1][d] + local[i][j-1][k-1][d]) )
+           / (2*pow(g.cell_size,3));
+
+    fzzx = ( (local[i+1][j][k+1][d] - 2*local[i+1][j][k][d] + local[i+1][j][k-1][d])
+           - (local[i-1][j][k+1][d] - 2*local[i-1][j][k][d] + local[i-1][j][k-1][d]) )
+           / (2*pow(g.cell_size,3));
+
+    fzzy = ( (local[i][j+1][k+1][d] - 2*local[i][j+1][k][d] + local[i][j+1][k-1][d])
+           - (local[i][j-1][k+1][d] - 2*local[i][j-1][k][d] + local[i][j-1][k-1][d]) )
+           / (2*pow(g.cell_size,3));
+}
+
+template <class GridDataType>
+KOKKOS_INLINE_FUNCTION
+std::enable_if_t<3 == GridDataType::num_space_dim, void>
+HarmonicValue_local(double local[3][3][3][3],
+                     GridDataType g, double xp[3], double result[3])
+{
+
+    for (int d = 0; d < 3; d++)
+        result[d] = 0.0;
+
+    // grid index is centered at (1,1,1)
+       // grid index closest to the particle
+    int i = floor( (xp[0]+g.center) / g.cell_size );
+    int j = floor( (xp[1]+g.center) / g.cell_size );
+    int k = floor( (xp[2]+g.center) / g.cell_size );
+    //grid position
+    double xg[3] = { i*g.cell_size - g.center, j*g.cell_size - g.center,
+                     k*g.cell_size - g.center};
+
+    double xdiff[3] = {xp[0]-xg[0], xp[1]-xg[1], xp[2]-xg[2]};
+    double xdiff2[3] = {xdiff[0]*xdiff[0], xdiff[1]*xdiff[1], xdiff[2]*xdiff[2]};
+
+    for (int d = 0; d < 3; d++)
+    {
+        double fx, fy, fz;
+        double fxx, fyy, fzz, fxy, fxz, fyz;
+        double fxxy, fxxz, fyyx, fyyz, fzzx, fzzy, fxyz;
+
+        f_local(local,d,g,fx,fy,fz);
+        f2_local(local,d,g,fxx,fyy,fzz,fxy,fxz,fyz);
+        f3_local(local,d,g,fxxy,fxxz,fyyx,fyyz,fzzx,fzzy,fxyz);
+
+        result[d] = local[1][1][1][d]
+            + xdiff[0]*fx + xdiff[1]*fy + xdiff[2]*fz
+            + 0.5*(xdiff2[0]*fxx + xdiff2[1]*fyy + xdiff2[2]*fzz)
+            + xdiff[0]*xdiff[1]*fxy + xdiff[1]*xdiff[2]*fyz + xdiff[0]*xdiff[2]*fxz
+            + 1.0/6.0*( (3*xdiff2[0]-xdiff2[1])*xdiff[1]*fxxy
+                      + (3*xdiff2[0]-xdiff2[2])*xdiff[2]*fxxz
+                      + (3*xdiff2[1]-xdiff2[0])*xdiff[0]*fyyx
+                      + (3*xdiff2[1]-xdiff2[2])*xdiff[2]*fyyz
+                      + (3*xdiff2[2]-xdiff2[0])*xdiff[0]*fzzx
+                      + (3*xdiff2[2]-xdiff2[1])*xdiff[1]*fzzy)
+            + xdiff[0]*xdiff[1]*xdiff[2]*fxyz;
+    }
+}
+
 
 } //MLC_Interp
 } //ExaMPM
