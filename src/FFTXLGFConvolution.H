@@ -21,6 +21,9 @@
 #include "fftxmdprdftObj.hpp"
 #include "fftximdprdftObj.hpp"
 #include "fftxrconvObj.hpp"
+#include "fftxmddftObj.hpp"
+#include "fftximddftObj.hpp"
+
 
 template <typename ExecutionSpace>
 class ConvolutionFFTX {
@@ -74,7 +77,7 @@ public:
 
   void read_LGF_file(const std::string& filename);
   template <class ProblemManagerType>
-  void compute_convolution(const ExecutionSpace& exec_space, ProblemManagerType& pm);
+  void compute_convolution(const ExecutionSpace& exec_space, ProblemManagerType& pm, double mddtime[45], double imddtime[45],int it );
 //  void write_view_to_txt(const Kokkos::View<double*, Kokkos::HostSpace>& view,
 //                       const std::string& filename);
 };

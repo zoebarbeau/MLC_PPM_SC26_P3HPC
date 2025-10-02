@@ -81,17 +81,15 @@ void ConvolutionFFTX<ExecutionSpace>::read_LGF_file(const std::string& filename)
 
 template <typename ExecutionSpace>
 template <typename ProblemManagerType>
-void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& exec_space, ProblemManagerType& pm) {
+void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& exec_space, ProblemManagerType& pm, double mdtime[45], double imdtime[45],int it) {
   auto F = pm.get(ExaMPM::Location::Node(), ExaMPM::Field::F());
   auto velx = pm.get(ExaMPM::Location::Node(), ExaMPM::Field::velx());
   Kokkos::deep_copy(velx, 0.0);
-  Kokkos::Timer timer;
   // Assume MDPRDFTProblem and IMDPRDFTProblem are properly defined elsewhere
  // Kokkos::View<double*, memory_space> dummy1("dummy1", domaindouble_x * domaindouble_y * domaindouble_z);
    double *F1D_vec = F1D.data();
 
    for(int d = 0; d < 3; d++){
-      timer.reset();
       Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space,{0, 0, 0}, {extent, extent, extent}),
           KOKKOS_LAMBDA(const int i, const int j, const int k) {
               int index = i * extent * extent + j * extent + k;
@@ -119,9 +117,10 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
       }();
 
       std::vector<int> sizes2{domaindouble_x, domaindouble_y, domaindouble_z};
-      MDPRDFTProblem r2cdft2{args2, sizes2, "mdprdft"};
-      r2cdft2.transform();
-
+      MDDFTProblem c2cdft2{args2, sizes2, "mdprdft"};
+      c2cdft2.transform();
+      mdtime[it+d] = c2cdft2.getTime();
+      
 
       Kokkos::parallel_for("Pointwise_multiply", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1)),
         KOKKOS_LAMBDA(const int i) {
@@ -145,9 +144,9 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
 
 
       std::vector<int> sizes3{domaindouble_x, domaindouble_y, domaindouble_z};
-      IMDPRDFTProblem c2rdft{args3, sizes3, "imdprdft"};
-      c2rdft.transform();
-
+      IMDDFTProblem c2cdft{args3, sizes3, "imdprdft"};
+      c2cdft.transform();
+      imdtime[it+d] = c2cdft.getTime();
 
       double norm_factor = pow(h,3)/(domaindouble_x * domaindouble_y * domaindouble_z);
       Kokkos::parallel_for("Normalize output", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * domaindouble_z),
@@ -183,10 +182,7 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
      }
 
 
-      Kokkos::fence();
-     double timerFFTX = timer.seconds();
-//     std::cout << timerFFTX << std::endl;
-
+//       Kokkos::fence();
        Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           int index_f = i * N * N + j * N + k;
@@ -214,23 +210,9 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
             velocity_g(i,j,k,d) = conv_output[index_f];
             velx(i,j,k,0) =  conv_output[index_f];
 
-            Kokkos::printf(" index %d velocity %f \n", index_f, conv_output);
           }
 
           });
-
-          auto host_conv = Kokkos::create_mirror_view(conv_output);
-	  Kokkos::deep_copy(host_conv, conv_output);
-	  ss2 << "convoutput_dir" << d << ".txt";
-          write_view_to_txt(host_conv, ss2.str());
-	  
-            //   Kokkos::printf("error");
-              std::stringstream ss;
-              ss << d << "_Velocity_trial";
-              pm.save_v( ss.str(),1,0.0);
-              pm.save_v("velocity_0",1,0.0);
-           //
-
 }
 
 
