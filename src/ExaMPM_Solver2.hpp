@@ -28,7 +28,7 @@
 #include "FFTXLGFConvolution.H"
 #include <fstream>
 #include <iomanip>
-
+//#include <nvToolsExt.h>
 namespace ExaMPM
 {
 //---------------------------------------------------------------------------//
@@ -44,8 +44,11 @@ template <class MemorySpace, class ExecutionSpace>
 class Solver : public SolverBase
 {
   public:
-    using ListType = Cabana::LinkedCellList<MemorySpace,double>;	 
-    
+   using ListType = Cabana::LinkedCellList<MemorySpace,double>;	 
+   std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _neigh_list, _Ci_grid_list, _W44_list;
+   
+//      using neigh_list_type = Cabana::LinkedCellList<MemorySpace, double>;
+
     template <class InitFunc>
     Solver( MPI_Comm comm, const Kokkos::Array<double, 6>& global_bounding_box,
             const std::array<int, 3>& global_num_cell,
@@ -97,20 +100,41 @@ class Solver : public SolverBase
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
         // 
-        corr_radius = 4;
+        corr_radius = 4.0;
+
+
+/*       std::shared_ptr<neigh_list_type> _neigh_list;
+ 
+        _neigh_list = std::make_shared<neigh_list_type>(
+                     positions,
+                     0,
+                     _pm->numParticle(),
+                     grid_delta,
+                     grid_min,
+                     grid_max,
+                     corr_radius * cell_size,
+                     1.0 / 4.0
+                 );
+ */              	
+        
+        std::cout << " pre list" << std::endl;
         //Real Particle Lists
 	//5x5x5 linked cell stencil
-        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/4.0);
+       _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
+       Cabana::permute(*_neigh_list,_pm->_particles);
+  //       ListType _neigh_list(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
 
+
+	std::cout << "post list" << std::endl;
 	//1x1x1 linked cell stencil
-        _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
+//        _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
+
 
 	//7x7 W44 stencil linked list
 	//
-	//
 
 	double third = 1.0 / 3.0;
-	_W44_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(), pgrid_delta, grid_min, grid_max, 3*hp, third);
+//	_W44_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(), pgrid_delta, grid_min, grid_max, 3*hp, third);
 
 	//Define the number of points contained in D0 and D
 	num_D0 = (global_num_cell[0] + 1 - 2)*(global_num_cell[1] + 1 - 2)*(global_num_cell[2] + 1 - 2);
@@ -120,9 +144,8 @@ class Solver : public SolverBase
 	//Fake Grid Particle Lists
 	_gridp = std::make_shared<GridManager<MemorySpace>>(ExecutionSpace(),*(_mesh->localGrid()),positions,nump,num_D0, extent,cell_size,center);
 	LocalCorrection::update_GridList(ExecutionSpace(),*(_mesh->localGrid()),*_pm, *_gridp, nump, num_D0, extent, cell_size, center);
-
+     
 	auto gridpositions = _gridp->get( Grid::Position() );
-     //   std::cout << "get pos nump " << nump << " numDO " << num_D0 << " cellsize " << cell_size <<" GLOBAL NUM CELL " << global_num_cell[0] << std::endl;
 	// 5x5x5 grid particle list
 
         _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/4.0);
@@ -136,71 +159,102 @@ class Solver : public SolverBase
     void solve( const double t_final, const int write_freq, const double center, const int c, const double cell_size, const double hp )
     {   
 
+          auto positions = _pm->get(Location::Particle(), Field::Position());
+	  auto u = _pm->get(Location::Particle(), Field::Velocity());
+	  auto vort = _pm->get(Location::Particle(), Field::Vorticity());
+	  auto advect_vort = _pm->get(Location::Particle(), Field::Vorticity_Advect());
+          int numP = _pm->numParticle();
+	//   auto _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
+        //   _neigh_list->build(positions);
+
 
         ConvolutionFFTX<ExecutionSpace> FFTXConv(extent,center,cell_size);
         std::string file="/global/homes/z/zbarbeau/ExaMPM/LatticeGreensFunction/exec/G_256_Octant";
 
         FFTXConv.read_LGF_file(file);
         // Output initial state.
-//       outputParticles();
-        
+//        outputParticles(); 
        _time = 0;
        _dt   =0.0001953125;
        double mddtime[45] = {0};
        double imddtime[45] = {0};
        double multiply[4]  = {0.5,0.5,1.0,0.0};
        double increment[4] = {1.0/6.0,1.0/3.0,1.0/3.0,1.0/6.0};
-       std::ofstream timing_file("FFTX.txt");
+/*     std::ofstream timing_file("FFTX.txt");
        if (!timing_file.is_open()) {
           std::cerr << "Error: could not open timing_output.txt for writing!\n";
           return;
-       }
+       
+	  
+	  }
 
+
+*/
+
+       using neighbor_traits =
+       Cabana::NeighborList<ListType>;
+   
+       
+
+
+
+      
        while( _time <1* _dt ){
 
 //          _pm->initRK4();
 //          RK4::updateP(ExecutionSpace(),*_pm);
-          for(int i = 0; i < 15; i++){
+//	  Kokkos::fence();
+          for(int i = 0; i < 5; i++){
 
-//              Kokkos::Timer timer; 
+		  
+  //           nvtxRangePush("deposition");
+
              LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
-//             Kokkos::fence();
-//             double timeD = timer.seconds();
- //            timer.reset();
 
-             FFTXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
-	     Kokkos::fence();
-//             double timeF = timer.seconds();
-             std::stringstream name;
-             name << 2 << "_velocity";
+	//     nvtxRangePop();
+//    Kokkos::fence();
+	     std::stringstream name;
+             name << 2 << "_F";
              const std::string prefix = name.str();
-             Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix,1,0,  *(_pm->_velx));
+             Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix,_step,_time,  *(_pm->_Fx));
+	     //nvtxRangePush("Convolution");
+             FFTXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
+	     //nvtxRangePop();
+             Kokkos::fence();
+             std::stringstream fname;
+             fname << 2 << "_v2";
+             const std::string prefix2 = fname.str();
 
- //            timer.reset();
+//             Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix2,_step,_time,  *(_pm->_velx));
+             //nvtxRangePush("Corrections"); 
              LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
                      extent,center,cell_size, hp, corr_radius);
-//             Kokkos::fence();
-//             double timeCorr = timer.seconds();
-//             timer.reset();
-             LocalCorrection::Interaction_NBody(ExecutionSpace(), *_pm, *_neigh_list, c, center, cell_size, hp, corr_radius );  
-//             Kokkos::fence();
-//             double timeInt = timer.seconds();
-          
-//             RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
-	     if( i == 0 ){
 
-                LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
- //               Kokkos::fence();
-	     }
-//           std::cout << timeD << " "<< timeF << " " << timeCorr << " " << timeInt << " " << std::endl;
+//             LocalCorrection::Interaction_NBody(ExecutionSpace(),positions,u,vort,advect_vort, *_neigh_list, c, center, cell_size, hp, corr_radius,numP );  
+	     //nvtxRangePop();
+//	     RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
+//    Kokkos::fence();
 //
-             for(int d = 0; d < 3; d++){
+             LocalCorrection::Interaction_NBody3(
+                             positions, u, vort, advect_vort,
+                             *_neigh_list,
+                             hp,
+                             numP
+                         );
+			 
+	     if( i == 0 ){
+//                Kokkos::fence();
+                LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
+	     }
+        /*     for(int d = 0; d < 3; d++){
 		    int k = i+d;
                     timing_file << mddtime[k] << " " << imddtime[k] << "\n"; 
              }
+
+	     */
        }
 
-        double mdavg =0, imdavg=0;
+/*        double mdavg =0, imdavg=0;
 
 	for(int i = 0; i < 45; i++){
 
@@ -210,25 +264,12 @@ class Solver : public SolverBase
 	}
 
 	timing_file << mdavg << " " << imdavg << "\n";
-        timing_file.close();
+        timing_file.close(); */
+
          _time += _dt; 
          _step += 1;
-//         outputParticles(); 
      }
      
-
-//     LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
-        
-//         LocalCorrection::Error_V2( ExecutionSpace(), *_pm, extent, cell_size, hp);
-      
-/*       for(int d = 0; d < 3; d++){
-
-          Remap::VelG_Error( ExecutionSpace(),*_pm,*_W44_list,center,hp,hp,d);
-
-       }
-
-*/
-
 
 
     }
@@ -241,7 +282,7 @@ class Solver : public SolverBase
 #ifdef Cabana_ENABLE_HDF5
         Cabana::Experimental::HDF5ParticleOutput::HDF5Config h5_config;
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
-            h5_config,"single_particle", _pmesh->localGrid()->globalGrid().comm(),
+            h5_config,"Hills", _pmesh->localGrid()->globalGrid().comm(),
             _step, _time, _pm->numParticle(),
             _pm->get( Location::Particle0(), Field::Position() ),
             _pm->get( Location::Particle0(), Field::Vorticity() ),
@@ -271,7 +312,7 @@ class Solver : public SolverBase
     std::shared_ptr<Mesh<MemorySpace>> _mesh, _pmesh;
     std::shared_ptr<ProblemManager<MemorySpace>> _pm;
     std::shared_ptr<GridManager<MemorySpace>> _gridp;
-    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _neigh_list, _Ci_grid_list, _W44_list;
+//    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _neigh_list, _Ci_grid_list, _W44_list;
     std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _oneGrid_list, _Pi_grid_list;
     int _rank;
     int num_D0;

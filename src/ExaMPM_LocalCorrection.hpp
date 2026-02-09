@@ -19,6 +19,7 @@
 #include <ExaMPM_GridManager.hpp>
 #include <Kokkos_Core.hpp>
 #include <cmath>
+#include <counters.hpp>
 //#include "FFTWLGFConvolution.H"
 namespace ExaMPM
 {
@@ -30,7 +31,7 @@ namespace LocalCorrection
 
 
 // Get Vorticity and Position
-void test_greens( )
+/*void test_greens( )
 {
        double vortp[3] = { 1, 1, -1 };
        double xq[3]    = { 0,0,0 };
@@ -41,7 +42,7 @@ void test_greens( )
 
        std::cout << " K = " << K[0] << "  " << K[1] << " " << K[2] << std::endl;
 
-}
+} */
 // template <class ProblemManagerType, class ExecutionSpace, class GridManager>
 
 /* void Test_L27( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
@@ -110,6 +111,7 @@ void test_greens( )
    std::cout << " error max = " << errormax << std::endl;
 }
 */
+/*
  template <class ProblemManagerType, class ExecutionSpace, class GridManager>
  void Test_F( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const GridManager& gridp,
@@ -230,7 +232,7 @@ void test_greens( )
 	    fxz_e += std::abs(fxz - ( 8*pi*pi*sin(2*pi*x)*sin(4*pi*y)*sin(4*pi*z)  ) )*h;
 	    fyz_e += std::abs(fyz - (-16*pi*pi*cos(2*pi*x)*cos(4*pi*y)*sin(4*pi*z) ) )*h;
 
-  /*          std::cout << " fxx = " << fxx << " fyy = " << fyy << " fzz = " << fzz 
+            std::cout << " fxx = " << fxx << " fyy = " << fyy << " fzz = " << fzz 
 		      << " fxy = " << fxy << " fxz = " << fxz << " fyz = " << fyz << std::endl;
 
             std::cout << " exact xx = " << (-4*pi*pi*cos(2*pi*x)*sin(4*pi*y)*cos(4*pi*z) )
@@ -239,7 +241,7 @@ void test_greens( )
 		      << " exact xy = " << (-8*pi*pi*sin(2*pi*x)*cos(4*pi*y)*cos(4*pi*z)  )
 		      << " exact xz = " << (8*pi*pi*sin(2*pi*x)*sin(4*pi*y)*sin(4*pi*z)  )
 		      << " exact yz = " << (-16*pi*pi*cos(2*pi*x)*cos(4*pi*y)*sin(4*pi*z) )
-                      << std::endl; */
+                      << std::endl; 
 
 
 
@@ -249,6 +251,7 @@ void test_greens( )
 	     << " xy error = " << fxy_e << " xz error = " << fxz_e << " yz error = " << fyz_e << std::endl;
 
 }
+
 
  template <class ProblemManagerType, class ExecutionSpace, class GridManager>
  void Test_MLC_Interp( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
@@ -371,7 +374,7 @@ void test_greens( )
             fzzy_e += abs(fzzy - (-64*pi*pi*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) ) )*h*h*h;
 	    fxyz_e += abs(fxyz - (32*pi*pi*pi*sin(2*pi*x)*cos(4*pi*y)*sin(4*pi*z)  ) )*h*h*h;
 
- /*           std::cout << " fxxy = " << fxxy << " fxxz = " << fxxz << " fyyx = " << fyyx
+           std::cout << " fxxy = " << fxxy << " fxxz = " << fxxz << " fyyx = " << fyyx
                       << " fyyz = " << fyyz << " fzzx = " << fzzx << " fzzy = " << fzzy << " fxyz = " << fxyz << std::endl;
 
             std::cout << " exact xxy = " << (-16*pi*pi*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) )
@@ -381,7 +384,7 @@ void test_greens( )
                       << " exact zzx = " << (32*pi*pi*pi*sin(2*pi*x)*sin(4*pi*y)*cos(4*pi*z)  )
                       << " exact zzy = " << (-64*pi*pi*pi*cos(2*pi*x)*cos(4*pi*y)*cos(4*pi*z) )
 		      << " exact xyz = " << (32*pi*pi*pi*sin(2*pi*x)*cos(4*pi*y)*sin(4*pi*z)  ) 
-                      << std::endl;  */
+                      << std::endl;  
 
 
 
@@ -391,7 +394,7 @@ void test_greens( )
              << " yyz error = " << fyyz_e << " zzx error = " << fzzx_e << " zzy error = " << fzzy_e << " xyz error = " << fxyz_e << std::endl;
 
 }
-
+*/
 template <class ExecutionSpace, class ProblemManagerType, class GridManagerType, class LocalGridType>
 void update_GridList(const ExecutionSpace& exec_space, const LocalGridType& cgrid,
                        const ProblemManagerType& pm, const GridManagerType& gridp, const int num_p
@@ -485,7 +488,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    Kokkos::deep_copy(Fx, 0.0);
    //Get relevant interpolation quantities 
    MLC_Interp::GridData<3> g( h, center);
-
+   PerfCounters counters("DepositionCounters");
+   
    int sz = corr_radius*2 +1;
 //   Kokkos::View<double*****> vel_loc("local_velocity",num_grid,sz,sz,sz,3);
 // Kokkos::deep_copy( vel_loc, 0.0);
@@ -545,14 +549,13 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                    counter++;
                                    //Get Real Particle ID
                                    int p = j - num_grid;
- 
+                          //         PerfCounters::add(counters.view, PerfCounters::PARTICLES_INTERACTED, 1);
                                    // Get Vorticity and Position
                                    double vortp[3]  = { vorticity_p( p, 0 ), vorticity_p( p, 1 ), vorticity_p( p, 2 ) };                                  
                                    double xp[3]    = { positions(p,0), positions(p,1), positions(p,2) };
                                    double K[3];
-
                                    //Calculate Green's Function
-                                   GreensFunction::Calculate_qK(xg, xp, vortp, K,h,corr_radius);
+                                   GreensFunction::Calculate_qK(xg, xp, vortp, K,hp,corr_radius);
                                    int ip = std::floor((xp[0]+center)/h); int jp = std::floor((xp[1]+center)/h);
                                    int kp = std::floor((xp[2]+center)/h);
                                    //Correct Velocity
@@ -578,7 +581,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                 
              if( counter > 0 ){
-                 
+//                 PerfCounters::add(counters.view, PerfCounters::CELLS_WITH_PARTICLES, 1);                 
 	         for( int c0i = imin+1; c0i < imax-1; c0i++)
                    for( int c0j = jmin+1; c0j < jmax-1; c0j++)
                       for( int c0k = kmin+1; c0k < kmax-1; c0k++)
@@ -651,8 +654,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 //		            F(c0i,c0j,c0k,d) += ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][d]*-128.0/30.0 + u_corner[d]*1.0/30.0 + u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) /pow( g.cell_size, 2.0); ///F_temp[d];
                          }
 
-                            double result = ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][0]*-128.0/30.0 + u_corner[0]*1.0/30.0 +
-                                              u_edge[0]*1.0/10.0 + 7.0/15.0*u_face[0]) / pow( g.cell_size, 2.0 );
+                            double result = ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][2]*-128.0/30.0 + u_corner[2]*1.0/30.0 +
+                                              u_edge[2]*1.0/10.0 + 7.0/15.0*u_face[2]) / pow( g.cell_size, 2.0 );
 
                             Kokkos::atomic_add(&Fx(c0i,c0j,c0k,0), result);
                           
@@ -678,6 +681,14 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 	});
 
+/*       auto res = counters.copy_to_host();
+       printf("Deposition summary:\n");
+       printf("  particles_interacted   = %llu\n", (unsigned long long)res[PerfCounters::PARTICLES_INTERACTED]);
+       printf("  cells_withp          = %llu\n", (unsigned long long)res[PerfCounters::CELLS_WITH_PARTICLES]);
+       printf(" num particles total = %d\n", pm.numParticle() );
+
+*/
+
 
 //          pm.save_F("Fy_", 1, 0);
 
@@ -692,7 +703,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
        });
 */
 }
-
+/*
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
  void TestConvolution( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const NeighborListType& Ci_list,
                         const GridManager& gridp, const int num_grid, const int extent, const double center, const double h)
@@ -755,6 +766,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
              pm.save_F( "Laplacian_V",1,0);
 
 }
+*/
  template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
  void Corrections( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const NeighborListType& Ci_list, const NeighborListType& Pi_list, 
@@ -779,7 +791,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    Kokkos::deep_copy( velocity_corr, 0.0);
    //Get relevant interpolation quantities 
    MLC_Interp::GridData<3> g( h, center);
-   
+   PerfCounters counters("CorrectionsCounters"); 
    pm.save_v( "Precorrection_V",1,0);
    //Iterate over D0
 // Kokkos::View<double*****> vel_loc("local_velocity",num_grid,3,3,3,3); 
@@ -857,9 +869,9 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                          double vortp[3] = { vorticity_p(p,0), vorticity_p(p,1), vorticity_p(p,2) };
                                          double xp[3]    = { positions(p,0), positions(p,1), positions(p,2) };
                                          double K[3];
-
-					 //Calculate Green's Function
-                                         GreensFunction::Calculate_qK(xg, xp, vortp, K,h,corr_radius );
+                                    //     PerfCounters::add(counters.view, PerfCounters::PARTICLES_INTERACTED, 1);
+                                      					 //Calculate Green's Function
+                                         GreensFunction::Calculate_qK(xg, xp, vortp, K,hp,corr_radius );
 
 					 //Correct Velocity
                                          for(int d = 0; d < 3; d++)
@@ -874,12 +886,12 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                    }
 
-     //        std::cout << " completed loop " << std::endl;
 
 	     //Interpolate Particles where floor(xp/h) == i
              for( int r = offset; r < offset+size; r++)
              {
 
+	//	 PerfCounters::add(counters.view, PerfCounters::CELLS_WITH_PARTICLES, 1);
 		 auto j = Pi_list.getParticle( r );   
 
 		 //Check for Real Particle vs. Grid Particle 
@@ -923,19 +935,111 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
         });
 
 
+/*       auto res = counters.copy_to_host();
+       printf("CORRECTIONS summary:\n");
+       printf("  particles_interacted   = %llu\n", (unsigned long long)res[PerfCounters::PARTICLES_INTERACTED]);
+       printf("  cells_withp          = %llu\n", (unsigned long long)res[PerfCounters::CELLS_WITH_PARTICLES]);
+       printf(" num particles total = %d\n", pm.numParticle() );
+*/
+
+
+
 //     pm.save_v( "Post_Correction_V",1,0.0);    
         
 
 }
 
- template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
- void Interaction_NBody( const ExecutionSpace& exec_space, const ProblemManagerType& pm, 
-		        const NeighborListType& neigh_list, const int c,
-		       	const double center, const double cell_size, const double hp, const int corr_radius )
+   struct MyReduce
+    {
+        double sum_um[3];
+        double sum_up[3];
+        double sum_u[3];
+
+
+        // Default constructor
+        KOKKOS_INLINE_FUNCTION
+        MyReduce()
+        {
+          for(int d=0; d<3; ++d)
+          {
+              sum_um[d] = 0.0;
+              sum_up[d] = 0.0;
+              sum_u[d] = 0.0;
+          }
+        }
+
+
+	KOKKOS_INLINE_FUNCTION
+        static void init(MyReduce& v) {
+        for(int d=0; d<3; ++d) {
+          v.sum_u[d]  = 0.0;
+          v.sum_up[d] = 0.0;
+          v.sum_um[d] = 0.0;
+        }
+        }
+
+	// Combine reductions
+        KOKKOS_INLINE_FUNCTION
+        void operator+=(const MyReduce &rhs)
+        {
+           for(int d = 0; d < 3; d++){
+             sum_um[d] += rhs.sum_um[d];
+             sum_up[d] += rhs.sum_up[d];
+             sum_u[d] += rhs.sum_u[d];
+	   }
+        }
+    };
+
+struct Reduce9Reducer
 {
-	
+    using value_type = Kokkos::Array<double,9>;
+
+    KOKKOS_INLINE_FUNCTION
+    void init(value_type &v) const
+    {
+        for (int i=0; i<9; ++i) v[i] = 0.0;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    void join(value_type &dst, const value_type &src) const
+    {
+        for (int i=0; i<9; ++i) dst[i] += src[i];
+    }
+};
+
+struct Reduce9Value {
+    double data[9];
+};
+
+struct Reduce9 {
+    using value_type = Reduce9Value;
+
+    KOKKOS_INLINE_FUNCTION
+    static void init(value_type& v) {
+        for(int i=0;i<9;i++) v.data[i] = 0.0;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    static void join(value_type& dst, const value_type& src) {
+        for(int i=0;i<9;i++) dst.data[i] += src.data[i];
+    }
+
+        // REQUIRED FOR CABANA:
+    KOKKOS_INLINE_FUNCTION
+    static void join(value_type& dst, const double src[9]) {
+        for(int i=0;i<9;i++) dst.data[i] += src[i];
+    }
+};
+
+
+ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
+ void Interaction_NBody2( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
+                        NeighborListType& neigh_list, const int c,
+                        const double center, const double cell_size, const double hp, const int corr_radius )
+{
+
     double x[3], xq[3];
-    double K[3], vort[3]; 
+    double K[3], vort[3];
 
     //Get vorticity, postion and velocity on particles
     auto u_p = pm.get( Location::Particle(), Field::Velocity() );
@@ -943,90 +1047,184 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
     auto vort_p = pm.get( Location::Particle(), Field::Vorticity() );
     auto advect_vorticity = pm.get( Location::Particle(), Field::Vorticity_Advect() );
     auto velx       = pm.get(Location::Node(), Field::velx() );
-    // p is the particle of interest and q is the neighbor particle
+    Cabana::permute(neigh_list, pm._particles);
+    //using neighbor_list_traits = NeighborList<NeighborListType>;
+    using neighbor_traits =
+    Cabana::NeighborList<NeighborListType>;
+    using MemorySpace = typename ProblemManagerType::memory_space;
+
+    int numP = pm.numParticle();
+
+    Kokkos::View<int*, Kokkos::HostSpace> h_counts("h_counts", numP);
+    Kokkos::View<int*, MemorySpace> d_counts("d_counts", numP);
+
+    Kokkos::parallel_for("ComputeNeighborCounts", numP, KOKKOS_LAMBDA(int q){
+       d_counts(q) = neighbor_traits::numNeighbor(neigh_list, q);
+    });
+
+    Kokkos::deep_copy(h_counts, d_counts); // now host has counts
+    Kokkos::Timer timer;
+    for(int q = 0; q < numP; q++){
+
+ 
+	  int numNeigh = h_counts(q);
+          Kokkos::parallel_for(   
+          "interactions2",     
+          Kokkos::RangePolicy<ExecutionSpace>( exec_space,0, numNeigh ),
+          KOKKOS_LAMBDA( const int i ) {
+
+                const int p = neighbor_traits::getNeighbor(neigh_list, q, i);
+
+                // Particle P Location
+                double x[3]  = { x_p( p, 0 ), x_p( p, 1 ), x_p( p, 2 ) };
+     
+                //Particle Q (Neighbor) Position
+                double xq[3] = { x_p( q, 0 ), x_p( q, 1 ), x_p( q, 2 ) };
+                double vort[3]  = { vort_p( q, 0 ), vort_p( q, 1 ), vort_p( q, 2 ) };
+                double K[3], K_plus[3], K_minus[3];
+                double xp_minus[3], xp_plus[3];
+     
+                for(int d = 0; d < 3; d++)
+                {
+                   xp_minus[d] = x[d] - 0.5*hp*vort_p(p,d);
+                   xp_plus[d]  = x[d] + 0.5*hp*vort_p(p,d);
+     
+                }
+     
+                //Evaluate Green's Function with number
+                GreensFunction::Calculate_qK(x, xq, vort, K,hp,corr_radius);
+                GreensFunction::Calculate_qK(xp_minus, xq, vort, K_minus,hp,corr_radius);
+                GreensFunction::Calculate_qK(xp_plus, xq, vort, K_plus,hp,corr_radius);
+     
+                       //Correct Velocity at P with Local Neighbor Interaction at Q
+                for(int d = 0; d < 3; d++)
+                {
+                     u_p(p,d) += K[d];
+                     advect_vorticity(p,d) += ( K_plus[d] - K_minus[d] )/ hp;
+                }    
+        
+
+
+	  });
+
+//	  Kokkos::fence();
+                                
+    }
+
+    double time = timer.seconds();
+    std::cout << " timer inside " << time << std::endl;
+
+
+
+}
+ template <class ExecutionSpace, class NeighborListType,class VortSlice, class PosSlice, class USlice, class AdvectVortSlice>
+ void Interaction_NBody( const ExecutionSpace& exec_space, PosSlice x_p, USlice u_p, VortSlice vort_p, AdvectVortSlice advect_vorticity,
+		        NeighborListType& neigh_list, const int c,
+		       	const double center, const double cell_size, const double hp, const int corr_radius, const int numP )
+{
+	
+   Kokkos::Timer timer; 
+
     auto  interaction = KOKKOS_LAMBDA(const int p, const int  q){
 
+         double x[3]  = { x_p( p, 0 ), x_p( p, 1 ), x_p( p, 2 ) };
+         double xp_minus[3], xp_plus[3];
 
-	// Particle P Location
-	double x[3]  = { x_p( p, 0 ), x_p( p, 1 ), x_p( p, 2 ) };
+         for(int d = 0; d < 3; d++)
+         {
+                xp_minus[d] = x[d] - 0.5*hp*vort_p(p,d);
+                xp_plus[d]  = x[d] + 0.5*hp*vort_p(p,d);
+
+         }
+
 
 	//Particle Q (Neighbor) Position
         double xq[3] = { x_p( q, 0 ), x_p( q, 1 ), x_p( q, 2 ) };
         double vort[3]  = { vort_p( q, 0 ), vort_p( q, 1 ), vort_p( q, 2 ) };
         double K[3], K_plus[3], K_minus[3];
-	double xp_minus[3], xp_plus[3];
-
-	for(int d = 0; d < 3; d++)
-	{
-           xp_minus[d] = x[d] - 0.5*hp*vort_p(p,d);
-	   xp_plus[d]  = x[d] + 0.5*hp*vort_p(p,d); 
-
-	}
 
         //Evaluate Green's Function with number
-        GreensFunction::Calculate_qK(x, xq, vort, K,cell_size,corr_radius);
-	GreensFunction::Calculate_qK(xp_minus, xq, vort, K_minus,cell_size,corr_radius);
-	GreensFunction::Calculate_qK(xp_plus, xq, vort, K_plus,cell_size,corr_radius);
+        GreensFunction::Calculate_qK(x, xq, vort, K,hp,corr_radius);
+	GreensFunction::Calculate_qK(xp_minus, xq, vort, K_minus,hp,corr_radius);
+	GreensFunction::Calculate_qK(xp_plus, xq, vort, K_plus,hp,corr_radius);
 
 
 	//Correct Velocity at P with Local Neighbor Interaction at Q
         for(int d = 0; d < 3; d++)
         {
-              u_p(p,d) += K[d];
-	      advect_vorticity(p,d) += ( K_plus[d] - K_minus[d] )/ hp;
+             u_p(p,d) += K[d];
+             advect_vorticity(p,d) += ( K_plus[d] - K_minus[d] )/ hp;
         }
 
                 
      };
 
           //Find neighbors and calculate interaction for all particles
-	  Cabana::neighbor_parallel_for(Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, pm.numParticle() ), interaction, neigh_list, Cabana::FirstNeighborsTag(), Cabana::SerialOpTag(), "LocalCorrections" );
-
-/*      std::cout << " num particles " << pm.numParticle() << std::endl;
-
-        Kokkos::parallel_for(
-        "print_velocity",
-        Kokkos::RangePolicy<ExecutionSpace>( exec_space, 0, pm.numParticle() ),
-        KOKKOS_LAMBDA( const int i ) {
-
-          double x[3]  = { x_p( i, 0 )-0.5, x_p( i, 1 )-0.5, x_p( i, 2 )-0.5 };
- 
-          double v_exact[3], v_error[3];
-          double r =  sqrt(x[1]*x[1] + x[2]*x[2]+x[0]*x[0]);
-          double R = 0.25;
-          double R2 = 0.25*0.25;
-          double U = 1;
-          double R3 = 0.25*0.25*0.25;
-          double xz = x[0]*x[2];
-          double yz = x[1]*x[2];
-          if( r < (0.25-1e-8) ){
-
-            v_exact[0] = -1.5*xz/R2*U;
-            v_exact[1] = -1.5*yz/R2*U;
-            v_exact[2] = -1.5*( 1.0 + x[2]*x[2]/R2 -  2.0*r*r/R2  ) *U;
-          }else{
-
-            v_exact[0] = -1.5 * (  xz / pow( r, 5.0) )*R3*U;
-            v_exact[1] = -1.5 * (  yz / pow( r, 5.0) )*R3*U;
-            v_exact[2] = U*( 1.0 + R3 / (2.0*pow( r, 3.0 ) ) ) - U*1.5*R3 / (  pow( r, 5.0 ) ) * x[2]*x[2] ;
-            
-     }
+	  Cabana::neighbor_parallel_for(Kokkos::RangePolicy<ExecutionSpace>( 0,numP ), interaction, neigh_list, Cabana::FirstNeighborsTag(), Cabana::SerialOpTag(), "LocalCorrections" );
+	  Kokkos::fence();
+	  double time = timer.seconds();
+	  std::cout << " time = " << time << std::endl; 
 
 
-
-
-            for( int d = 0; d < 3; d++){
-              v_error[d] = v_exact[d] - u_p(i,d); 
-            }
-                 
-  //        Kokkos::printf(" p %d, u %f v %f w %f  uex %f vex %f wex %f x %f y %f z %f \n",i,u_p(i,0),u_p(i,1), u_p(i,2), v_exact[0], v_exact[1], v_exact[2],x[0],x[1],x[2]);
-//             Kokkos::printf(" u_p %e advection vorticity %e \n", u_p(i,0),advect_vorticity(i,0) );
-
-        });
-*/
 
 } 
 
+template <class PositionSlice, class VelocitySlice, class VorticitySlice, 
+          class AdvectSlice, class NeighborListType>
+void Interaction_NBody3(
+    PositionSlice x_p,
+    VelocitySlice u_p,
+    VorticitySlice vort_p,
+    AdvectSlice advect_vorticity,
+    NeighborListType& neigh_list,
+    const double hp,
+    const int numP
+)
+{
+    using ExecutionSpace = typename PositionSlice::execution_space;
+    
+    Kokkos::Timer timer;
+    
+    auto interaction = KOKKOS_LAMBDA(const int p, const int q)
+    {
+        double xp[3] = { x_p(p,0), x_p(p,1), x_p(p,2) };
+        double xq[3] = { x_p(q,0), x_p(q,1), x_p(q,2) };
+        double uq[3] = { vort_p(q,0), vort_p(q,1), vort_p(q,2) };
+        
+        double xp_minus[3], xp_plus[3];
+        for(int d = 0; d < 3; d++)
+        {
+            xp_minus[d] = xp[d] - 0.5*hp*vort_p(p,d);
+            xp_plus[d]  = xp[d] + 0.5*hp*vort_p(p,d);
+        }
+        
+        double K[3], K_plus[3], K_minus[3];
+        
+        GreensFunction::Calculate_qK(xp, xq, uq, K, hp, 4);
+        GreensFunction::Calculate_qK(xp_plus, xq, uq, K_plus, hp, 4);
+        GreensFunction::Calculate_qK(xp_minus, xq, uq, K_minus, hp, 4);
+        
+        for(int d = 0; d < 3; d++)
+        {
+            u_p(p,d) += K[d];
+            advect_vorticity(p,d) += (K_plus[d] - K_minus[d]) / hp;
+        }
+    };
+    
+    Cabana::neighbor_parallel_for(
+        Kokkos::RangePolicy<ExecutionSpace>(0, numP),
+        interaction,
+        neigh_list,
+        Cabana::FirstNeighborsTag(),
+        Cabana::SerialOpTag(),
+        "LocalCorrections"
+    );
+    
+/*    Kokkos::fence();
+    double time = timer.seconds();
+    std::cout << "time Int 3= " << time << std::endl;
+    */
+}
 
  template <class ProblemManagerType, class ExecutionSpace,class LocalGridType>
  void Error_V( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
@@ -1255,7 +1453,7 @@ std::cout << "L2 P = " << std::setprecision(12) << L2_pfinal << std::endl;
    pm.save_v( ss.str(),1,0.0);   
 
 }   
-*/
+
  template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
  void Test_ReadBack( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const NeighborListType& neigh_list, const int c,const int extent,
@@ -1301,6 +1499,8 @@ std::cout << "L2 P = " << std::setprecision(12) << L2_pfinal << std::endl;
      });
      //
  }
+
+*/
 } // end namespace LocalCorrection
 } // end namespace ExaMPM
 

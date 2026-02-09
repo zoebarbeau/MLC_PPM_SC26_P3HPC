@@ -25,6 +25,7 @@ ExaMPM_VInterpolation.hpp
 FFTXLGFConvolution.H
 FFTXLGFConvolutionImplem.H
 #ExaMPM_ConvolutionGPU.H
+counters.hpp
   )
 
 set(SOURCES

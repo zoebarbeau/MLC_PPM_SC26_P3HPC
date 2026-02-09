@@ -61,7 +61,9 @@ KOKKOS_INLINE_FUNCTION void inverse( const Real m[3][3], Real m_inv[3][3] )
 //---------------------------------------------------------------------------//
 // Matrix vector multiply. A*x = y
 template <class Real>
-KOKKOS_INLINE_FUNCTION void matVecMultiply( const Real a[3][3], const Real x[3],
+KOKKOS_INLINE_FUNCTION
+__attribute__((always_inline))
+void matVecMultiply( const Real a[3][3], const Real x[3],
                                             Real y[3] )
 {
     for ( int i = 0; i < 3; ++i )

@@ -17,7 +17,7 @@
 #include <mpi.h>
 #include <array>
 #include <cmath>
-
+//#include <nvToolsExt.h>
 //---------------------------------------------------------------------------//
 // Create the problem setup. The initial geometry is a static water column
 // from [0,0.4] in X, [0,0.6] in Z, with the entire Y domain filled.
@@ -182,10 +182,13 @@ int main( int argc, char* argv[] )
     // // Run the transform
     // conv.transform();
 
+         // Push NVTX range to start profiling at the right time
+//    nvtxRangePush("Main Start");
 
     // run the problem.
-    initgrid( cell_size, ppc, halo_size,
-              exec_space, hp );
+    initgrid( cell_size, ppc, halo_size, exec_space, hp );
+
+//    nvtxRangePop(); // end main start range
 
     Kokkos::finalize();
 

@@ -121,7 +121,7 @@ KOKKOS_INLINE_FUNCTION void W44_Weight(double W44[3], double x_g[3], double x_p[
 
 }
 
-
+/*
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
 void VelG_Error( const ExecutionSpace& exec_space, ProblemManagerType& pm,
                         const NeighborListType& W44_list, const double center, const double h, const double hp,const int d)
@@ -193,6 +193,7 @@ void VelG_Error( const ExecutionSpace& exec_space, ProblemManagerType& pm,
    ss << d << "_Vortp";
    pm.save_v( ss.str(),1,0.0);
 }
+*/
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
 void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
                         const NeighborListType& W44_list, const double center, const double h, const double hp)
@@ -235,18 +236,18 @@ void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
 			  double weights[3];   
                           double xg[3] = {i*h - center, j*h - center, k*h - center};
                           W44_Weight(weights, xg, xp, h, hp);
-			  if( std::abs(vorticity_p(p,0) * ratio * ( weights[0]*weights[1]*weights[2] )) > 0.001){
+/*			  if( std::abs(vorticity_p(p,0) * ratio * ( weights[0]*weights[1]*weights[2] )) > 0.001){
                                   Kokkos::printf(" pre VORT %f \n",vorticity_g(i,j,k,0));
                           }
-
+*/
                           for(int d = 0; d < 3; d++)
 			     vorticity_g(i,j,k,d) += vorticity_p(p,d) * ratio * ( weights[0]*weights[1]*weights[2] );
-			  if( std::abs(vorticity_p(p,0) * ratio * ( weights[0]*weights[1]*weights[2] )) > 0.001){
+/*			  if( std::abs(vorticity_p(p,0) * ratio * ( weights[0]*weights[1]*weights[2] )) > 0.001){
 		         	  Kokkos::printf(" addition %f VORT %f \n", vorticity_p(p,0) * ratio * ( weights[0]*weights[1]*weights[2] ),vorticity_g(i,j,k,0));
 				  Kokkos::printf("i %d j %d k %d numParticle %d \n ", i, j, k, p);
                                   Kokkos::printf(" xp %f yp %f zp %f \n", xp[0], xp[1], xp[2]);
                           }
-
+*/
                      }
 
 
@@ -261,7 +262,7 @@ void W44( const ExecutionSpace& exec_space, ProblemManagerType& pm,
           
 
 }
-
+/*
 template <class ProblemManagerType, class ExecutionSpace, class NeighborListType>
 void Test_Remap( const ExecutionSpace& exec_space, ProblemManagerType& pm,
                         const NeighborListType& W44_list, const double center, const double h, const double hp)
@@ -340,7 +341,7 @@ void Test_Remap_Particles( const ExecutionSpace& exec_space, ProblemManagerType&
 
 	});
 }
-
+*/
 } // end namespace REMAP
 } // end namespace ExaMPM
 
