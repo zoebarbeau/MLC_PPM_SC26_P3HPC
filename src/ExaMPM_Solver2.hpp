@@ -120,7 +120,7 @@ class Solver : public SolverBase
         std::cout << " pre list" << std::endl;
         //Real Particle Lists
 	//5x5x5 linked cell stencil
-       _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
+       _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/4.0);
        Cabana::permute(*_neigh_list,_pm->_particles);
   //       ListType _neigh_list(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
 
@@ -209,7 +209,7 @@ class Solver : public SolverBase
 		  
   //           nvtxRangePush("deposition");
 
-             LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
+  //           LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
 
 	//     nvtxRangePop();
 //    Kokkos::fence();
@@ -218,7 +218,7 @@ class Solver : public SolverBase
              const std::string prefix = name.str();
              Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix,_step,_time,  *(_pm->_Fx));
 	     //nvtxRangePush("Convolution");
-             FFTXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
+   //          FFTXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
 	     //nvtxRangePop();
              Kokkos::fence();
              std::stringstream fname;
@@ -235,12 +235,13 @@ class Solver : public SolverBase
 //	     RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
 //    Kokkos::fence();
 //
-             LocalCorrection::Interaction_NBody3(
+/*           LocalCorrection::Interaction_NBody3(
                              positions, u, vort, advect_vort,
                              *_neigh_list,
                              hp,
                              numP
                          );
+			 */
 			 
 	     if( i == 0 ){
 //                Kokkos::fence();

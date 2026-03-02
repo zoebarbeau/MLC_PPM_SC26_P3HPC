@@ -8,10 +8,10 @@
 #include <Kokkos_Core.hpp>
 
 #include <complex>
-#include "fftx.hpp"
-// #include "fftxinterface.hpp"
+//#include "fftx3.hpp"
+// #include "interface.hpp"
 // #include "/home/h82/Documents/Bluestone/SPIRAL/FFTX/fftx/examples/rconv/rconvObj.hpp"
-// #include "fftxrconvObj.hpp"
+// #include "rconvObj.hpp"
 //#include "mddftObj.hpp"
 
 #include <mpi.h>
@@ -34,20 +34,28 @@ struct ParticleInitFunc
     KOKKOS_INLINE_FUNCTION bool operator()( const double x[3],
                                             ParticleType& p ) const
     {   
-	double theta, q, R, U,a;
+	double r,s,theta, q, loc, R, U,loc2,a;
         double pi = 2*acos(0.0);
         double magn,vortx, vorty, vortz;
-        q = pow( pow(x[0]-0.5, 2.0) + pow(x[1]-0.5,2.0) ,  0.5);
+        double xhalf[3] = {x[0]+_hp*0.5,x[1]+_hp*0.5,x[2]+_hp*0.5};
+        q = sqrt( ( x[0]-0.5)*(x[0]-0.5) +( x[1]-0.5)*(x[1]-0.5) + ( x[2]-0.5)*(x[2] -0.5) );
+        double qhalf = sqrt(xhalf[0]*xhalf[0] + xhalf[1]*xhalf[1] + xhalf[2]*xhalf[2] );
+        loc = pow( pow(x[0]-0.2, 2.0) + pow(x[1]-0.2,2.0) + pow(x[2]-0.2, 2.0),  0.5);
+        loc2 = pow( pow(x[0]+0.2, 2.0) + pow(x[1]+0.2,2.0) + pow(x[2]+0.2, 2.0),  0.5);
 
-        R = 0.35;
-        a = 0.075;
+	double x0[3] = {x[0]-0.5,x[1]-0.5,x[2]-0.5};
+	double rho = pow( x0[0]*x0[0] + x0[1]*x0[1] , 0.5);
+        R = 0.25;
+	a = 0.1;
+        U = 1;
 
-        if( (pow(q-R,2.0) + pow(x[2]-0.5,2.0)) < pow(a,2.0)){
 
-              theta = atan2((x[1]-0.5),(x[0]-0.5));
-	      vortz = -sin(theta);
-              vortx = cos(theta); //15.0*U/(2.0*R*R)*x[1];
-              vorty = 0.0; //-15.0*U/(2.0*R*R)*x[0];
+        if(( (rho-R)*(rho-R) +  x0[2]*x0[2] ) < (a*a-1e-16) ){
+
+           //   std::cout << " x y z " << x[0] << " " << x[1] << " " << x[2] << " q " << q << std::endl; 
+	      vortz = 0.0;
+              vortx = -x0[1]/rho*_hp*_hp*_hp;
+              vorty = x0[0]/rho*_hp*_hp*_hp;
 	      Cabana::get<0>( p, 0 ) = vortx; //vortx;
               Cabana::get<0>( p, 1 ) = vorty; //vorty;
               Cabana::get<0>( p, 2 ) = vortz;
@@ -61,9 +69,8 @@ struct ParticleInitFunc
 
               // Position
               for ( int d = 0; d < 3; ++d )
-                 Cabana::get<2>( p, d ) = x[d]; ///+0.1*_h; // + 0.125; //0.5*_h;
-
-	      return true;
+                 Cabana::get<2>( p, d ) = x[d]; 
+              return true;
       }
 
         return false;
@@ -75,7 +82,7 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
                const std::string& exec_space, const double hp )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
-    Kokkos::Array<double, 6> global_box = { 0,0,0,1,1,1};
+    Kokkos::Array<double, 6> global_box = { 0.0,0.0,0.0,1.0,1.0,1.0};
     double center = 0;
     int c      = 4;
     // Compute the number of cells in each direction. The user input must
@@ -109,7 +116,7 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     bc.boundary[3] = ExaMPM::BoundaryType::NO_SLIP;
     bc.boundary[4] = ExaMPM::BoundaryType::NO_SLIP;
     bc.boundary[5] = ExaMPM::BoundaryType::NO_SLIP;
-    double t_final = 1.0;
+    double t_final =  0.005; 
     int write_freq = 1;
     // Solve the problem.
     auto solver = ExaMPM::createSolver(

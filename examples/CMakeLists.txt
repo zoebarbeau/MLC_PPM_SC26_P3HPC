@@ -66,8 +66,7 @@ target_include_directories(Hill PUBLIC
 )
 
 # Link with ExaMPM library, FFTX, and other dependencies
-target_link_libraries(Hill PRIVATE exampm dl nvrtc)
-
+target_link_libraries(Hill PRIVATE exampm dl nvrtc) # nvToolsExt)
 # Use FFTX helper to link the FFTX libraries
 FFTX_add_includes_libs_to_target(Hill
     LIB_DIR ${FFTX_LIB_DIR}
@@ -76,6 +75,6 @@ FFTX_add_includes_libs_to_target(Hill
 # Define compilation flags for FFTX CUDA
 target_compile_definitions(Hill PRIVATE FFTX_CUDA)
 
-# Install target
+# Install target`
 install(TARGETS Hill DESTINATION ${CMAKE_INSTALL_BINDIR})
 

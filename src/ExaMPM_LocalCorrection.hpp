@@ -512,7 +512,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
             bool particlefound = false;
             int counter = 0;
 
-            double vel_loc[9][9][9][3]={0};
+            double vel_loc[5][5][5][3]={0};
       
    //Reset Ci to 0
 /*            for( int ci = imin; ci <= imax; ci++)
@@ -819,72 +819,60 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
             Ci_list.getStencilCells( Ci_list.getParticleBin( i ), imin,imax, jmin,
                                jmax, kmin, kmax ); 
 
+        
 	     auto offset = Pi_list.binOffset(ii,jj,kk);
              auto size   = Pi_list.binSize(ii,jj,kk);
              double vel_loc[3][3][3][3]={0};
-              for( int si = ii-1; si <= ii+1; si++)
-                  for(int sj = jj-1; sj <= jj+1; sj++)
+              for( int si = ii-1; si <= ii+1; si++){
+                  for(int sj = jj-1; sj <= jj+1; sj++){
                       for( int sk = kk-1; sk <= kk+1; sk++)
                        {
 
            			  for(int d = 0; d < 3; d++)
-                                  //   vel_loc(i,si-ii+1,sj-jj+1,sk-kk+1,d) = velocity_g(si,sj,sk,d);
 				  vel_loc[si-ii+1][sj-jj+1][sk-kk+1][d] = velocity_g(si,sj,sk,d);
+				  
+
+                                  
 
                         }
+                    }
+                }
+        
 
-
-	    //Iterate over Si 
-	    for( int si = ii-1; si <= ii+1; si++)
-               for(int sj = jj-1; sj <= jj+1; sj++)
-                  for( int sk = kk-1; sk <= kk+1; sk++)
-                  { 
-
-
-		     //Calculate jh
-                     double xg[3] = { si*h - center, sj*h - center, sk*h - center};
-
-                     //Iterate over cell stencil of the linked list = Ci
-                     for( int pi = imin; pi < imax; pi++)
-                        for( int pj = jmin; pj < jmax; pj ++)
-                           for( int pk = kmin; pk < kmax; pk ++)
-                           {
- 
-                                //Get Offset and Size to determine # particles
-                                auto Ci_offset = Ci_list.binOffset(pi,pj,pk);
-                                auto Ci_size   = Ci_list.binSize(pi,pj,pk);
-				//Loop over Ci
-                                for( std::size_t r = Ci_offset; r < Ci_offset+Ci_size; r++)
-                                {
-				     //Get true particle ID in fake particle list	
-                                     auto j = Ci_list.getParticle( r );
-
-                                     //Check that it is a real particle vs fake				     
-				     if( id(j) == 1 ){
-
-					 //Get Real Particle ID   
-					 int p = j - num_grid;   
-
-					 // Get Vorticity and Position 
-                                         double vortp[3] = { vorticity_p(p,0), vorticity_p(p,1), vorticity_p(p,2) };
-                                         double xp[3]    = { positions(p,0), positions(p,1), positions(p,2) };
-                                         double K[3];
-                                    //     PerfCounters::add(counters.view, PerfCounters::PARTICLES_INTERACTED, 1);
-                                      					 //Calculate Green's Function
-                                         GreensFunction::Calculate_qK(xg, xp, vortp, K,hp,corr_radius );
-
-					 //Correct Velocity
-                                         for(int d = 0; d < 3; d++)
-//                                   	    vel_loc(i,si-ii+1,sj-jj+1,sk-kk+1,d) -= K[d];
-                                            vel_loc[si-ii+1][sj-jj+1][sk-kk+1][d] -= K[d];
-//                                          Kokkos::printf("Kx %f xg %f yg %f zg %f i %d \n", K[0],xg[0],xg[1],xg[2],i); 
-
-                                     } 
+        // Iterate over cell stencil
+        for(int pi = imin; pi < imax; pi++)
+            for(int pj = jmin; pj < jmax; pj++)
+                for(int pk = kmin; pk < kmax; pk++) {
+                    
+                    auto Ci_offset = Ci_list.binOffset(pi, pj, pk);
+                    auto Ci_size   = Ci_list.binSize(pi, pj, pk);
+                    
+                    for(std::size_t r = Ci_offset; r < Ci_offset + Ci_size; r++) {
+                        auto j = Ci_list.getParticle(r);
+                        
+                        if(id(j) == 1) {
+                            int p = j - num_grid;
+      
+      			    
+                            double vortp[3] = {vorticity_p(p,0), vorticity_p(p,1), vorticity_p(p,2)};
+                            double xp[3] = {positions(p,0), positions(p,1), positions(p,2)};
+                            
+                            // Small fixed-size loops - compiler will unroll with -O3
+                            for(int si = 0; si < 3; si++) {
+                                for(int sj = 0; sj < 3; sj++) {
+                                    for(int sk = 0; sk < 3; sk++) {
+                                        double K[3];
+                                        double xg[3] = { (ii-1+si)*h-center,(jj-1+sj)*h-center,(kk-1+sk)*h-center};
+                                        GreensFunction::Calculate_qK(xg,xp, vortp, K, hp, corr_radius);
+                                        vel_loc[si][sj][sk][0] -= K[0];
+                                        vel_loc[si][sj][sk][1] -= K[1];
+                                        vel_loc[si][sj][sk][2] -= K[2];
+                                    }
                                 }
-
-                           }
-
-                   }
+                            }
+                        }
+                    }
+                }
 
 
 	     //Interpolate Particles where floor(xp/h) == i
@@ -945,6 +933,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 
 //     pm.save_v( "Post_Correction_V",1,0.0);    
+
         
 
 }
@@ -1182,7 +1171,19 @@ void Interaction_NBody3(
 )
 {
     using ExecutionSpace = typename PositionSlice::execution_space;
+   
+       using neighbor_traits =
+    Cabana::NeighborList<NeighborListType>;
+         
     
+//    Kokkos::View<int*, Kokkos::HostSpace> h_counts("h_counts", numP);
+//    Kokkos::View<int*, Kokkos::CudaSpace> d_counts("d_counts", numP);
+
+    Kokkos::parallel_for("ComputeNeighborCounts", 1, KOKKOS_LAMBDA(int q){
+       int num_neighbors = neighbor_traits::totalNeighbor(neigh_list);
+       Kokkos::printf(" total neighbors %d num particles %d ", num_neighbors, numP);
+    });
+
     Kokkos::Timer timer;
     
     auto interaction = KOKKOS_LAMBDA(const int p, const int q)
