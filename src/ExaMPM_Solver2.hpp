@@ -100,7 +100,7 @@ class Solver : public SolverBase
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
         // 
-        corr_radius = 4.0;
+        corr_radius = 2.0;
 
 
 /*       std::shared_ptr<neigh_list_type> _neigh_list;
@@ -120,14 +120,14 @@ class Solver : public SolverBase
         std::cout << " pre list" << std::endl;
         //Real Particle Lists
 	//5x5x5 linked cell stencil
-       _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/4.0);
+       _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/2.0);
        Cabana::permute(*_neigh_list,_pm->_particles);
   //       ListType _neigh_list(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 0.25);
 
 
 	std::cout << "post list" << std::endl;
 	//1x1x1 linked cell stencil
-//        _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
+        _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
 
 
 	//7x7 W44 stencil linked list
@@ -148,7 +148,7 @@ class Solver : public SolverBase
 	auto gridpositions = _gridp->get( Grid::Position() );
 	// 5x5x5 grid particle list
 
-        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/4.0);
+        _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/2.0);
        
         //1x1x1 grid particle list
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);
@@ -209,7 +209,7 @@ class Solver : public SolverBase
 		  
   //           nvtxRangePush("deposition");
 
-  //           LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_Pi_grid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
+             LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
 
 	//     nvtxRangePop();
 //    Kokkos::fence();
@@ -227,10 +227,10 @@ class Solver : public SolverBase
 
 //             Cabana::Grid::Experimental::BovWriter::writeTimeStep(ExecutionSpace(),prefix2,_step,_time,  *(_pm->_velx));
              //nvtxRangePush("Corrections"); 
-             LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_Pi_grid_list,*_gridp,num_D0,
-                     extent,center,cell_size, hp, corr_radius);
+            LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
+                   extent,center,cell_size, hp, corr_radius);
 
-//             LocalCorrection::Interaction_NBody(ExecutionSpace(),positions,u,vort,advect_vort, *_neigh_list, c, center, cell_size, hp, corr_radius,numP );  
+             LocalCorrection::Interaction_NBody(ExecutionSpace(),positions,u,vort,advect_vort, *_neigh_list, c, center, cell_size, hp, corr_radius,numP );  
 	     //nvtxRangePop();
 //	     RK4::increment(ExecutionSpace(), *_pm, _dt, i, multiply[i], increment[i]);
 //    Kokkos::fence();

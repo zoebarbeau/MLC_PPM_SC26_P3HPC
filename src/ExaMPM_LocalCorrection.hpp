@@ -482,10 +482,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    auto velx       = pm.get(Location::Node(), Field::velx() );
    auto Fx         = pm.get(Location::Node(), Field::Fx() );
 
-   Kokkos::deep_copy( velx, 0.0);
    Kokkos::deep_copy( F, 0.0);
    Kokkos::deep_copy( velocity_g, 0.0);
-   Kokkos::deep_copy(Fx, 0.0);
    //Get relevant interpolation quantities 
    MLC_Interp::GridData<3> g( h, center);
    PerfCounters counters("DepositionCounters");
@@ -528,52 +526,37 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 //          assert(imax - imin <= 9 && jmax - jmin <= 9 && kmax - kmin <= 9);   
 	    auto offset = Pi_list.binOffset(ii,jj,kk);
             auto size   = Pi_list.binSize(ii,jj,kk);
-	    // Iterate over Ci
-            for( int ci = imin; ci < imax; ci++)
-                 for( int cj = jmin; cj < jmax; cj ++)
-                      for( int ck = kmin; ck < kmax; ck ++){
-			  //Calculate jh
-                          double xg[3] = { ci*h - center, cj*h - center, ck*h - center};    
-
-                          //Loop over Ci
-                          for( std::size_t r = offset; r < offset+size; r++)
-                          {    
-                             /*  if(size > 1){
-                                 Kokkos::printf("offset %d size %d \n ", offset, size);
-                               } */
-                              //Get true particle ID in fake particle list       
-                              auto j = Pi_list.getParticle( r );
-
-			      //Check that it is a real particle vs fake
-                              if( id(j) == 1 ){
-                                   counter++;
-                                   //Get Real Particle ID
-                                   int p = j - num_grid;
-                          //         PerfCounters::add(counters.view, PerfCounters::PARTICLES_INTERACTED, 1);
-                                   // Get Vorticity and Position
-                                   double vortp[3]  = { vorticity_p( p, 0 ), vorticity_p( p, 1 ), vorticity_p( p, 2 ) };                                  
-                                   double xp[3]    = { positions(p,0), positions(p,1), positions(p,2) };
-                                   double K[3];
-                                   //Calculate Green's Function
-                                   GreensFunction::Calculate_qK(xg, xp, vortp, K,hp,corr_radius);
-                                   int ip = std::floor((xp[0]+center)/h); int jp = std::floor((xp[1]+center)/h);
-                                   int kp = std::floor((xp[2]+center)/h);
-                                   //Correct Velocity
-                                   for(int d = 0; d < 3; d++){
-                   
-
-                                         vel_loc[ci-imin][cj-jmin][ck-kmin][d] += K[d]; 
-                                   }
-
-                                   
-//                                       Kokkos::printf(" velocity %f x %f y %f z %f i %d \n", K[0],xg[0],xg[1],xg[2],i);
-                                 
-                                        velx(ci,cj,ck,0) +=K[0];
 
 
+             //Loop over Ci
+             for( std::size_t r = offset; r < offset+size; r++)
+             {
+
+		     auto j = Pi_list.getParticle( r );
+
+                     counter++;
+                     int p = j ;//- num_grid;
+                     double vortp[3]  = { vorticity_p( p, 0 ), vorticity_p( p, 1 ), vorticity_p( p, 2 ) };
+                     double xp[3]    = { positions(p,0), positions(p,1), positions(p,2) };
+
+
+
+            	    // Iterate over Ci
+                      for( int ci = imin; ci < imax; ci++)
+                         for( int cj = jmin; cj < jmax; cj ++)
+                              for( int ck = kmin; ck < kmax; ck ++){
+        			  //Calculate jh
+                                  double xg[3] = { ci*h - center, cj*h - center, ck*h - center};    
+                                  //Get true particle ID in fake particle list       
+                                  double K[3];
+                                  //Calculate Green's Function
+                                  GreensFunction::Calculate_qK(xg, xp, vortp, K,hp,corr_radius);
+                                  for(int d = 0; d < 3; d++){
+        
+        
+                                     vel_loc[ci-imin][cj-jmin][ck-kmin][d] += K[d]; 
                                   }
-                          
-
+        
 
                          }
 
@@ -581,7 +564,6 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
                 
              if( counter > 0 ){
-//                 PerfCounters::add(counters.view, PerfCounters::CELLS_WITH_PARTICLES, 1);                 
 	         for( int c0i = imin+1; c0i < imax-1; c0i++)
                    for( int c0j = jmin+1; c0j < jmax-1; c0j++)
                       for( int c0k = kmin+1; c0k < kmax-1; c0k++)
@@ -648,21 +630,16 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    		         for(int d = 0; d < 3; d++){
 
                             double result = ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][d]*-128.0/30.0 + u_corner[d]*1.0/30.0 + 
-                                              u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) / pow( g.cell_size, 2.0 );
+                                              u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) / (g.cell_size*g.cell_size);
 
                             Kokkos::atomic_add(&F(c0i,c0j,c0k,d), result);
-//		            F(c0i,c0j,c0k,d) += ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][d]*-128.0/30.0 + u_corner[d]*1.0/30.0 + u_edge[d]*1.0/10.0 + 7.0/15.0*u_face[d]) /pow( g.cell_size, 2.0); ///F_temp[d];
                          }
 
-                            double result = ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][2]*-128.0/30.0 + u_corner[2]*1.0/30.0 +
+/*                            double result = ( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][2]*-128.0/30.0 + u_corner[2]*1.0/30.0 +
                                               u_edge[2]*1.0/10.0 + 7.0/15.0*u_face[2]) / pow( g.cell_size, 2.0 );
 
                             Kokkos::atomic_add(&Fx(c0i,c0j,c0k,0), result);
-                          
-//                                Fx(c0i,c0j,c0k,0) +=( vel_loc[c0i-imin][c0j-jmin][c0k-kmin][0]*-128.0/30.0 + u_corner[0]*1.0/30.0 + u_edge[0]*1.0/10.0 + 7.0/15.0*u_face[0]) /(h*h); // F_temp[0];
-
-//                         if(abs(Fx(c0i,c0j,c0k,0) ) > 0 )
-//                         Kokkos::printf("c0i %d c0j %d c0z %d Fx %f Fy %f Fz %f \n", c0i,c0j,c0k,F_temp[0],F_temp[1],F_temp[2]);
+*/                         
 
                           }
 
@@ -769,7 +746,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 */
  template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
  void Corrections( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
-                        const NeighborListType& Ci_list, const NeighborListType& Pi_list, 
+                        const NeighborListType& Ci_list, const NeighborListType& Pi_list, const NeighborListType& Neigh_list,
                         const GridManager& gridp,
                         const int num_grid, const int extent, const double center, const double h, const double hp, const int corr_radius)
 {
@@ -844,35 +821,36 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
             for(int pj = jmin; pj < jmax; pj++)
                 for(int pk = kmin; pk < kmax; pk++) {
                     
-                    auto Ci_offset = Ci_list.binOffset(pi, pj, pk);
-                    auto Ci_size   = Ci_list.binSize(pi, pj, pk);
+                    auto Ci_offset = Neigh_list.binOffset(pi, pj, pk);
+                    auto Ci_size   = Neigh_list.binSize(pi, pj, pk);
                     
                     for(std::size_t r = Ci_offset; r < Ci_offset + Ci_size; r++) {
-                        auto j = Ci_list.getParticle(r);
+                        auto j = Neigh_list.getParticle(r);
                         
-                        if(id(j) == 1) {
-                            int p = j - num_grid;
+//                        if(id(j) == 1) {
+                            int p = j; //! - num_grid;
       
       			    
                             double vortp[3] = {vorticity_p(p,0), vorticity_p(p,1), vorticity_p(p,2)};
                             double xp[3] = {positions(p,0), positions(p,1), positions(p,2)};
                             
-                            // Small fixed-size loops - compiler will unroll with -O3
+                           // Small fixed-size loops - compiler will unroll with -O3
                             for(int si = 0; si < 3; si++) {
                                 for(int sj = 0; sj < 3; sj++) {
                                     for(int sk = 0; sk < 3; sk++) {
                                         double K[3];
                                         double xg[3] = { (ii-1+si)*h-center,(jj-1+sj)*h-center,(kk-1+sk)*h-center};
                                         GreensFunction::Calculate_qK(xg,xp, vortp, K, hp, corr_radius);
-                                        vel_loc[si][sj][sk][0] -= K[0];
-                                        vel_loc[si][sj][sk][1] -= K[1];
-                                        vel_loc[si][sj][sk][2] -= K[2];
+
+					for(int d = 0; d<3; d++)
+                                        vel_loc[si][sj][sk][d] -= K[d];
                                     }
                                 }
                             }
+			    
                         }
                     }
-                }
+             // }
 
 
 	     //Interpolate Particles where floor(xp/h) == i
@@ -883,17 +861,17 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 		 auto j = Pi_list.getParticle( r );   
 
 		 //Check for Real Particle vs. Grid Particle 
-		 if( id(j) == 1 ){
-	            int p = j - num_grid;		 
+//		 if( id(j) == 1 ){
+	            int p = j; // - num_grid;		 
                     double xp[3] = { positions(p, 0 ), positions( p, 1 ), positions( p, 2 ) };
                      // Update particle velocity.
                     double u_temp[3];
                     double x_plus[3], x_minus[3], u_plus[3], u_minus[3];
-		     // grid index closest to the particle
-                    int ip = floor( (xp[0]+g.center) / g.cell_size );
-                    int jp = floor( (xp[1]+g.center) / g.cell_size );
-                    int kp = floor( (xp[2]+g.center) / g.cell_size );
-                   //grid position
+		    // grid index closest to the particle
+                    //int ip = floor( (xp[0]+g.center) / g.cell_size );
+                    //int jp = floor( (xp[1]+g.center) / g.cell_size );
+                    //int kp = floor( (xp[2]+g.center) / g.cell_size );
+                    //grid position
 		    for( int d = 0; d < 3; d++)
 	            {
                        x_plus[d] = xp[d] + 0.5*hp*vorticity_p(p,d);
@@ -915,7 +893,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                        velocity_p(p,d) = u_temp[d];
                        advect_vort(p,d) = ( u_plus[d] - u_minus[d] ) / hp;
                     }
-                   }		    
+               //    }		    
 		 }
              
 
