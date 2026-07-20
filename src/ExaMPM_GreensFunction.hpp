@@ -73,6 +73,53 @@ void Calculate_qK(const double xp[3],const double xq[3], const double up[3], dou
 }
 */
 KOKKOS_INLINE_FUNCTION
+void Calculate_qK_MatVec_Fused(
+    const double xp[3], const double xq[3],
+    const double up[3], double K[3],
+    const double h )
+{
+    // Pre-computed constants
+    const double inv_4pi = 0.07957747154594767;  // 1/(4π)
+    const double delta = 0.5 * h;
+    const double delta2 = delta * delta;
+
+    // Compute distance components
+    const double dx = xp[0] - xq[0];
+    const double dy = xp[1] - xq[1];
+    const double dz = xp[2] - xq[2];
+    const double r2 = dx*dx + dy*dy + dz*dz;
+
+    // FIXED: Near-field FIRST (matches original logic)
+    if ( r2 < delta2 && r2 > 1e-24 )  // ← FIX #1: Changed >= to <
+    {
+        const double r = Kokkos::sqrt(r2);
+        const double delta3_inv = 1.0 / (delta * delta2);
+        const double near_const = 0.125 * inv_4pi * delta3_inv;
+        const double c = (-12.0 * r2 / delta2 + 20.0) * near_const;
+
+        K[0] = c * (dz*up[1] - dy*up[2]);
+        K[1] = c * (dx*up[2] - dz*up[0]);
+        K[2] = c * (dy*up[0] - dx*up[1]);
+    }
+    else if ( r2 >= delta2 )  // ← FIX #2: Far-field SECOND
+    {
+        const double r_inv = 1.0 / Kokkos::sqrt(r2);
+        const double r3_inv = r_inv * r_inv * r_inv;
+        const double c = inv_4pi * r3_inv;
+
+        K[0] = c * (dz*up[1] - dy*up[2]);
+        K[1] = c * (dx*up[2] - dz*up[0]);
+        K[2] = c * (dy*up[0] - dx*up[1]);
+    }
+    else  // Singularity: 0 <= r2 <= 1e-24
+    {
+        K[0] = 0.0;
+        K[1] = 0.0;
+        K[2] = 0.0;
+    }
+}
+
+KOKKOS_INLINE_FUNCTION
 void Calculate_qK( const double xp[3], const double xq[3],
                    const double up[3], double K[3],
                    const double h, const int corr_radius )
