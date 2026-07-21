@@ -96,11 +96,15 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
               F1D(index) = F(i, j, k, d);
           });
 
+      Kokkos::fence();
+      std::cout << " F1D built " << std::endl;
       auto host_F1D = Kokkos::create_mirror_view(F1D);
       Kokkos::deep_copy(host_F1D, F1D);
       std::stringstream ss1, ss2;
       ss1 << "F1D_dir" << d << ".txt";
       write_view_to_txt(host_F1D, ss1.str());
+      Kokkos::fence();
+      std::cout << " F1D Write to Text" << std::endl;
 
       Kokkos::parallel_for("Place F1D in doubledomain", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space,{0, 0, 0}, {extent, extent, extent}),
            KOKKOS_LAMBDA(const int k, const int j, const int i) {
@@ -108,6 +112,9 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
             int index_1d = k * extent * extent + j * extent + i;
             F1D_domaindouble[index_dd] = F1D[index_1d];
         });
+
+      Kokkos::fence();
+      std::cout << " F1D domain double " << std::endl;
 
       std::vector<void*> args2 = [&]() {
       static auto Fdft_data = F_dft.data();
@@ -120,7 +127,9 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
       MDDFTProblem c2cdft2{args2, sizes2, "mdprdft"};
       c2cdft2.transform();
       mdtime[it+d] = c2cdft2.getTime();
-      
+      Kokkos::fence();
+      std::cout << "C2C DFT2" << std::endl;
+
 
       Kokkos::parallel_for("Pointwise_multiply", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1)),
         KOKKOS_LAMBDA(const int i) {
@@ -135,6 +144,9 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
              pointwise_mul[i] = Complex(real_pw, img_pw);
        });
 
+      Kokkos::fence();
+      std::cout << "PTWISE" << std::endl;
+
       std::vector<void*> args3 = [&]() {
       static auto out_data = out_idft.data();
       static auto pwise_data = pointwise_mul.data();
@@ -148,6 +160,10 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
       c2cdft.transform();
       imdtime[it+d] = c2cdft.getTime();
 
+      Kokkos::fence();
+      std::cout << "C2C DFT" << std::endl;
+
+
       double norm_factor = pow(h,3)/(domaindouble_x * domaindouble_y * domaindouble_z);
       Kokkos::parallel_for("Normalize output", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * domaindouble_z),
         KOKKOS_LAMBDA(const int i) {
@@ -156,12 +172,20 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
      });
 
 
+     Kokkos::fence();
+     std::cout << "Normalization Factor" << std::endl;
+
+
      Kokkos::parallel_for("Normalize output", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space, {0, 0, 0}, {extent, extent, extent}),
         KOKKOS_LAMBDA(const int k, const int j, const int i) {
             int out_dd_index = k * domaindouble_y * domaindouble_x + j * domaindouble_x + i;
             int out_original_index = k * extent * extent + j * extent + i;
             conv_output[out_original_index] = out_normalize[out_dd_index];
      });
+
+     Kokkos::fence();
+     std::cout << " Normalize Output" << std::endl;
+
 
 
      auto velocity_g = pm.get(ExaMPM::Location::Node(), ExaMPM::Field::Velocity());
@@ -180,6 +204,10 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
 
 
      }
+
+      Kokkos::fence();
+      std::cout << "Velocity initialize" << std::endl;
+
 
 
 //       Kokkos::fence();
@@ -213,6 +241,11 @@ void ConvolutionFFTX<ExecutionSpace>::compute_convolution(const ExecutionSpace& 
           }
 
           });
+
+          Kokkos::fence();
+          std::cout << "1D to 3D" << std::endl;
+
+
 }
 
 
