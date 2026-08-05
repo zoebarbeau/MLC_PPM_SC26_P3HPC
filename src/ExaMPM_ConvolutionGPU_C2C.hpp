@@ -59,7 +59,6 @@ template <class ExecutionSpace, class ProblemManagerType>
 void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent,
                     const double center, const double h)
 {
-  printf("INSIDE CONVOLUTION::CONV_FFTX_C2C!!!!\n");
   using Complex = Kokkos::complex<double>;
 
   auto F = pm.get( Location::Node(),Field::F() );
@@ -151,7 +150,6 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
   else{
     std::cout << "Unable to open file" << std::endl;
   }
-  std::cout << "Size of LGF Vector=" << lgf_values.size()<<std::endl;
 
   // Creating a host view for the LGF values
   Kokkos::View<double*, Kokkos::HostSpace> host_LGF("h_view", domaindouble_x * domaindouble_y * domaindouble_z);
@@ -171,18 +169,23 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
           dev_LGF_cmplx[i] = Complex(dev_LGF[i], 0.0);
       });
 
-  double timerReadIn = timer.seconds();
-  std::cout << " time to readIn = " << timerReadIn << std::endl;
 
   Kokkos::View<Complex*, Kokkos::DefaultExecutionSpace::memory_space> symbol("symbol_view", domaindouble_x * domaindouble_y * domaindouble_z);
   Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> dummy1("dummy1_view", domaindouble_x * domaindouble_y * domaindouble_z);
 
-  std::vector<void*> args1 = [&]() {
+/*  std::vector<void*> args1 = [&]() {
       static auto symbol_data = symbol.data();
       static auto lgf_data = dev_LGF_cmplx.data();
       static auto dummy1_data = dummy1.data();
       return std::vector<void*>{&symbol_data, &lgf_data, &dummy1_data};
   }();
+
+*/
+
+  void* symbol_data = symbol.data();
+  void* lgf_data = dev_LGF_cmplx.data();
+  void* dummy1_data = dummy1.data();
+  std::vector<void*> args1{&symbol_data, &lgf_data, &dummy1_data};
   // Calculate the symbol i.e. forward DFT of the lattice Green's function
   std::vector<int> sizes{domaindouble_x, domaindouble_y, domaindouble_z};
   MDDFTProblem c2cdft1{args1, sizes, "mddft"};
@@ -221,12 +224,16 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
               F1D_dd_cmplx[i] = Complex(F1D_domaindouble[i], 0.0);
           });
 
-    std::vector<void*> args2 = [&]() {
-        static auto Fdft_data = F_dft.data();
+/*    std::vector<void*> args2 = [&]() {
+       static auto Fdft_data = F_dft.data();
         static auto F1D_data = F1D_dd_cmplx.data();
         static auto dummy2_data = dummy2.data();
         return std::vector<void*>{&Fdft_data, &F1D_data, &dummy2_data};
-    }();
+    }(); */
+    void* Fdft_data = F_dft.data();
+    void* F1D_data = F1D_dd_cmplx.data();
+    void* dummy2_data = dummy2.data();
+    std::vector<void*> args2{&Fdft_data, &F1D_data, &dummy2_data};
     // Calculate the forward DFT of the second input F1D_dd_cmplx
     std::vector<int> sizes2{domaindouble_x, domaindouble_y, domaindouble_z};
     MDDFTProblem c2cdft2{args2, sizes2, "mddft"};
@@ -248,12 +255,17 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
             });
 
     // Calculate the inverse dft to compute the final convolution value
-    std::vector<void*> args3 = [&]() {
+/*  std::vector<void*> args3 = [&]() {
         static auto out_data = out_idft.data();
         static auto pwise_data = pointwise_mul.data();
         static auto dummy3_data = dummy3.data();
         return std::vector<void*>{&out_data, &pwise_data, &dummy3_data};
-    }();
+    }(); */
+
+    void* out_data = out_idft.data();
+    void* pwise_data = pointwise_mul.data();
+    void* dummy3_data = dummy3.data();
+    std::vector<void*> args3{&out_data, &pwise_data, &dummy3_data};
     std::vector<int> sizes3{domaindouble_x, domaindouble_y, domaindouble_z};
     IMDDFTProblem c2cidft{args3, sizes3, "imddft"};
     c2cidft.transform();

@@ -87,8 +87,8 @@ class Solver : public SolverBase
         _pm = std::make_shared<ProblemManager<MemorySpace>>(
             ExecutionSpace(), _mesh, _pmesh, create_functor, particles_per_cell,
 	    cell_size, _center, hp, extent,extentp);
-	Kokkos::fence();
-	std::cout << "Finished problem manager" << std::endl;
+
+
 	double grid_min[3] = { 0,
                                0,
                                0 };
@@ -112,14 +112,14 @@ class Solver : public SolverBase
        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/corr_radius);
        //We order the list
         Cabana::permute(*_neigh_list,_pm->_particles);
-	Kokkos::fence();
-        std::cout << "Neighbor List" << std::endl;
+
+       
 
 
 	//1x1x1 linked cell stencil that defines Pi, the # particles associated with grid point i/its cell
         _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
-	Kokkos::fence();
-        std::cout << "OneD List" << std::endl;
+
+
 
 
 	//7x7 W44 stencil linked list
@@ -136,20 +136,20 @@ class Solver : public SolverBase
 	//Fake Grid Particle Lists
 	_gridp = std::make_shared<GridManager<MemorySpace>>(ExecutionSpace(),*(_mesh->localGrid()),positions,nump,num_D0, extent,cell_size,center);
 	LocalCorrection::update_GridList(ExecutionSpace(),*(_mesh->localGrid()),*_pm, *_gridp, nump, num_D0, extent, cell_size, center);
-	Kokkos::fence();
-        std::cout << "Grid List" << std::endl;
+
+
 
 	auto gridpositions = _gridp->get( Grid::Position() );
 	//These are particle lists including the grid points 
 	// 5x5x5 grid particle list for the correction radius
         _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/corr_radius);
-	Kokkos::fence();
-         std::cout << "Ci_grid_list" << std::endl;
+
+
 
         //1x1x1 grid particle list associated with grid cell i
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);
-	Kokkos::fence();
-        std::cout << "Pi grid list" << std::endl;
+
+
 
 	MPI_Comm_rank( comm, &_rank );
     }
@@ -165,13 +165,13 @@ class Solver : public SolverBase
 
 
 //        ConvolutionFFTX<ExecutionSpace> FFTXConv(extent,center,cell_size);
-	Kokkos::fence();
+
 //        std::cout << "Construct Convolution Class" << std::endl;
 
         std::string file="/home/zbarbeau/Hudson_P3M_H100/MLC_PPM/LatticeGreensFunction/exec/G_128_Octant";
 
-//      FFTXConv.read_LGF_file(file);
-	Kokkos::fence();
+ //       FFTXConv.read_LGF_file(file);
+
         std::cout << "Read in file" << std::endl;
         
 
@@ -187,37 +187,45 @@ class Solver : public SolverBase
        Cabana::NeighborList<ListType>;
 
 
-      
+       double timeCorr = 0, timeD = 0, timeInt = 0; 
+       double calls = 15;
        while( _time <1* _dt ){
 
  //      _pm->initRK4();
 //        RK4::updateP(ExecutionSpace(),*_pm);
-	 Kokkos::fence();
-         for(int i = 0; i < 1; i++){
 
+         for(int i = 0; i < 15; i++){
+
+	     Kokkos::Timer timer;
              LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
              Kokkos::fence();
-	     std::cout << "Depostion" << std::endl;
-             //FFTXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
+	     timeD += timer.seconds() / calls;
+             //TXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
 	     ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
 
-             Kokkos::fence();
-             std::cout << "Convolution" << std::endl;
 
+	     timer.reset();
              LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
                                       extent,center,cell_size, hp, corr_radius);
+
 	     Kokkos::fence();
-             std::cout << "Correction" << std::endl;
+             timeCorr += timer.seconds() / calls;
+
+	     timer.reset();
 
              LocalCorrection::Interaction_NBody(ExecutionSpace(),positions,u,vort,advect_vort, *_neigh_list, c, center, cell_size, hp, corr_radius,numP );
              Kokkos::fence();
-             std::cout << "Interaction" << std::endl;
+             timeInt += timer.seconds() / calls;
+	     timer.reset();
 
-			 
 	     if( i == 0 ){
                 LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
 	     }
           }
+
+	  std::cout << timeD << std::endl;
+	  std::cout << timeCorr << std::endl;
+	  std::cout << timeInt << std::endl;
 
 
          _time += _dt; 
