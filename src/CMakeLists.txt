@@ -22,9 +22,11 @@ ExaMPM_VInterpolation.hpp
 #FFTWLGFConvolution.H
 #FFTWLGFConvolutionImplem.H
 #ExaMPM_Convolution_FFTX.H
-FFTXLGFConvolution.H
-FFTXLGFConvolutionImplem.H
-#ExaMPM_ConvolutionGPU.H
+#FFTXLGFConvolution.H
+#FFTXLGFConvolutionImplem.H
+#ExaMPM_ConvolutionGPU.hpp
+#ExaMPM_NVIDIA_ConvolutionGPU_Test.hpp
+ExaMPM_ConvolutionGPU_C2C.hpp
 counters.hpp
   )
 

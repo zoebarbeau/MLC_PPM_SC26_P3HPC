@@ -25,7 +25,10 @@
 #include <ExaMPM_Remap.hpp>
 #include <ExaMPM_RK4.hpp>
 #include <mpi.h>
-#include "FFTXLGFConvolution.H"
+//#include "FFTXLGFConvolution.H"
+//#include <ExaMPM_NVIDIA_ConvolutionGPU_Test.hpp>
+//#include <ExaMPM_ConvolutionGPU.hpp>
+#include <ExaMPM_ConvolutionGPU_C2C.hpp>
 #include <fstream>
 #include <iomanip>
 //#include <nvToolsExt.h>
@@ -161,13 +164,13 @@ class Solver : public SolverBase
           int numP = _pm->numParticle();
 
 
-        ConvolutionFFTX<ExecutionSpace> FFTXConv(extent,center,cell_size);
+//        ConvolutionFFTX<ExecutionSpace> FFTXConv(extent,center,cell_size);
 	Kokkos::fence();
-        std::cout << "Construct Convolution Class" << std::endl;
+//        std::cout << "Construct Convolution Class" << std::endl;
 
-        std::string file="/global/homes/z/zbarbeau/ExaMPM/LatticeGreensFunction/exec/G_256_Octant";
+        std::string file="/home/zbarbeau/Hudson_P3M_H100/MLC_PPM/LatticeGreensFunction/exec/G_128_Octant";
 
-        FFTXConv.read_LGF_file(file);
+//      FFTXConv.read_LGF_file(file);
 	Kokkos::fence();
         std::cout << "Read in file" << std::endl;
         
@@ -195,7 +198,9 @@ class Solver : public SolverBase
              LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
              Kokkos::fence();
 	     std::cout << "Depostion" << std::endl;
-             FFTXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
+             //FFTXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
+	     ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
+
              Kokkos::fence();
              std::cout << "Convolution" << std::endl;
 
