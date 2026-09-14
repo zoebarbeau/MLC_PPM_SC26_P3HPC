@@ -10,8 +10,9 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef EXAMPM_MESH_HPP
-#define EXAMPM_MESH_HPP
+
+#ifndef MLC_MESH_HPP
+#define MLC_MESH_HPP
 
 #include <Cabana_Grid.hpp>
 
@@ -23,7 +24,7 @@
 
 #include <limits>
 
-namespace ExaMPM
+namespace MLC
 {
 //---------------------------------------------------------------------------//
 /*!
@@ -142,6 +143,6 @@ class Mesh
 
 //---------------------------------------------------------------------------//
 
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // end EXAMPM_MESH_HPP
+#endif // end MLC_MESH_HPP

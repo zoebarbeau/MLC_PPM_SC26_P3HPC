@@ -1,15 +1,15 @@
 /* This file is written by the authors specifically for MLC */
-#ifndef EXAMPM_GRIDMANAGER_HPP
-#define EXAMPM_GRIDMANAGER_HPP
+#ifndef MLC_GRIDMANAGER_HPP
+#define MLC_GRIDMANAGER_HPP
 
-#include <ExaMPM_Mesh.hpp>
-#include <ExaMPM_ParticleInit.hpp>
+#include <MLC_Mesh.hpp>
+#include <MLC_ParticleInit.hpp>
 #include <Cabana_Core.hpp>
 #include <Cabana_Grid.hpp>
 
 #include <memory>
 
-namespace ExaMPM
+namespace MLC
 {
 
 
@@ -58,6 +58,7 @@ class GridManager
     }
 
     std::size_t numParticle() const { return _gridp.size(); }
+
     //Functions to access index, position, and particle ID
     typename grid_list::template member_slice_type<0>
     get( Grid::Index  ) const
@@ -81,6 +82,6 @@ class GridManager
 
 //---------------------------------------------------------------------------//
 
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // end EXAMPM_PROBLEMMANAGER2_HPP
+#endif // end MLC_PROBLEMMANAGER2_HPP

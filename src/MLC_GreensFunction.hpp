@@ -1,16 +1,16 @@
 /* This file is written by the authors specifically for MLC */
-#ifndef EXAMPM_GREENSFUNCTION_HPP
-#define EXAMPM_GREENSFUNCTION_HPP
+#ifndef MLC_GREENSFUNCTION_HPP
+#define MLC_GREENSFUNCTION_HPP
 
-#include <ExaMPM_ProblemManager2.hpp>
+#include <MLC_ProblemManager2.hpp>
 #include <Cabana_Grid.hpp>
-#include <ExaMPM_DenseLinearAlgebra.hpp>
+#include <MLC_DenseLinearAlgebra.hpp>
 
 #include <Kokkos_Core.hpp>
 
 #include <cmath>
 
-namespace ExaMPM
+namespace MLC
 {
 namespace GreensFunction
 {
@@ -193,7 +193,7 @@ void Calculate_scalarK(const double xp[3],const double xq[3], double* scal_K)
 }
 
 } // end namespace GREENS FUNCTION
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // EXAMPM_GREENSFUNCTION_HPP
+#endif // MLC_GREENSFUNCTION_HPP
 

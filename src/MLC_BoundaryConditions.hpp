@@ -10,12 +10,13 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef EXAMPM_BOUNDARYCONDITIONS_HPP
-#define EXAMPM_BOUNDARYCONDITIONS_HPP
+
+#ifndef MLC_BOUNDARYCONDITIONS_HPP
+#define MLC_BOUNDARYCONDITIONS_HPP
 
 #include <Kokkos_Core.hpp>
 
-namespace ExaMPM
+namespace MLC
 {
 //---------------------------------------------------------------------------//
 struct BoundaryType
@@ -133,6 +134,6 @@ struct BoundaryCondition
 
 //---------------------------------------------------------------------------//
 
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // end EXAMPM_BOUNDARYCONDITIONS_HPP
+#endif // end MLC_BOUNDARYCONDITIONS_HPP

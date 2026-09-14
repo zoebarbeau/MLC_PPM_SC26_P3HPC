@@ -1,22 +1,22 @@
 set(HEADERS
-ExaMPM_BoundaryConditions.hpp
-ExaMPM_DenseLinearAlgebra.hpp
-ExaMPM_GreensFunction.hpp
-ExaMPM_GridManager.hpp
-ExaMPM_LocalCorrection.hpp
-ExaMPM_Mesh.hpp
-ExaMPM_MLC_Interp.hpp
-ExaMPM_ParticleInit.hpp
-ExaMPM_ProblemManager2.hpp
-ExaMPM_Remap.hpp
-ExaMPM_Solver2.hpp
-ExaMPM_Types.hpp
-ExaMPM_ConvolutionGPU_C2C.hpp
+MLC_BoundaryConditions.hpp
+MLC_DenseLinearAlgebra.hpp
+MLC_GreensFunction.hpp
+MLC_GridManager.hpp
+MLC_LocalCorrection.hpp
+MLC_Mesh.hpp
+MLC_MLC_Interp.hpp
+MLC_ParticleInit.hpp
+MLC_ProblemManager2.hpp
+MLC_Remap.hpp
+MLC_Solver2.hpp
+MLC_Types.hpp
+MLC_ConvolutionGPU_C2C.hpp
 counters.hpp
   )
 
 set(SOURCES
-  ExaMPM_Mesh.cpp
+  MLC_Mesh.cpp
   )
 
 install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

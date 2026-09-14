@@ -1,9 +1,9 @@
 /* This file is written by the authors specifically for MLC */
 
-#ifndef EXAMPM_MLC_INTERP_HPP
-#define EXAMPM_MLC_INTERP_HPP
+#ifndef MLC_MLC_INTERP_HPP
+#define MLC_MLC_INTERP_HPP
 
-#include <ExaMPM_Types.hpp>
+#include <MLC_Types.hpp>
 
 #include <Cabana_Grid.hpp>
 
@@ -13,7 +13,7 @@
 #include <cmath>
 #include <type_traits>
 
-namespace ExaMPM
+namespace MLC
 {
 //---------------------------------------------------------------------------//
 // LOCAL INTERPOLATION
@@ -551,6 +551,6 @@ HarmonicValue_local(double local[3][3][3][3],
 
 
 } //MLC_Interp
-} //ExaMPM
+} //MLC
 
 #endif

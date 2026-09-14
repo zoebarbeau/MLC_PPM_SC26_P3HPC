@@ -1,24 +1,24 @@
 /* This file is significantly modified from the ExaMPM Library */
-#ifndef EXAMPM_SOLVER2_HPP
-#define EXAMPM_SOLVER2_HPP
+#ifndef MLC_SOLVER2_HPP
+#define MLC_SOLVER2_HPP
 
-#include <ExaMPM_BoundaryConditions.hpp>
-#include <ExaMPM_Mesh.hpp>
-#include <ExaMPM_ProblemManager2.hpp>
+#include <MLC_BoundaryConditions.hpp>
+#include <MLC_Mesh.hpp>
+#include <MLC_ProblemManager2.hpp>
 #include <Cabana_Core.hpp>
 #include <Kokkos_Core.hpp>
-#include <ExaMPM_LocalCorrection.hpp>
-#include <ExaMPM_GridManager.hpp>
-#include <ExaMPM_Remap.hpp>
+#include <MLC_LocalCorrection.hpp>
+#include <MLC_GridManager.hpp>
+#include <MLC_Remap.hpp>
 #include <memory>
 #include <string>
-#include <ExaMPM_Remap.hpp>
-#include <ExaMPM_RK4.hpp>
+#include <MLC_Remap.hpp>
+#include <MLC_RK4.hpp>
 #include <mpi.h>
-#include <ExaMPM_ConvolutionGPU_C2C.hpp>
+#include <MLC_ConvolutionGPU_C2C.hpp>
 #include <fstream>
 #include <iomanip>
-namespace ExaMPM
+namespace MLC
 {
 //---------------------------------------------------------------------------//
 class SolverBase
@@ -186,9 +186,7 @@ class Solver : public SolverBase
              LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
              Kokkos::fence();
 	     timeD += timer.seconds() / calls;
-             //TXConv.compute_convolution(ExecutionSpace(), *_pm,mddtime, imddtime,i);
 	     ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
-
 
 	     timer.reset();
              LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
@@ -290,7 +288,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
     {
 #ifdef KOKKOS_ENABLE_SERIAL
         return std::make_shared<
-            ExaMPM::Solver<Kokkos::HostSpace, Kokkos::Serial>>(
+            MLC::Solver<Kokkos::HostSpace, Kokkos::Serial>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
             halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc );
 #else
@@ -303,7 +301,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
     {
 #ifdef KOKKOS_ENABLE_OPENMP
         return std::make_shared<
-            ExaMPM::Solver<Kokkos::HostSpace, Kokkos::OpenMP>>(
+            MLC::Solver<Kokkos::HostSpace, Kokkos::OpenMP>>(
             comm, global_bounding_box, global_num_cell,pgrid_num_cell, periodic, partitioner,
             halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc );
 #else
@@ -316,7 +314,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
     {
 #ifdef KOKKOS_ENABLE_CUDA
         return std::make_shared<
-            ExaMPM::Solver<Kokkos::CudaSpace, Kokkos::Cuda>>(
+            MLC::Solver<Kokkos::CudaSpace, Kokkos::Cuda>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
             halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc );
 #else
@@ -328,7 +326,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
               0 == exec_space.compare( "HIP" ) )
     {
 #ifdef KOKKOS_ENABLE_HIP
-        return std::make_shared<ExaMPM::Solver<Kokkos::Experimental::HIPSpace,
+        return std::make_shared<MLC::Solver<Kokkos::Experimental::HIPSpace,
                                                Kokkos::Experimental::HIP>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
             halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc );
@@ -345,6 +343,6 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
 
 //---------------------------------------------------------------------------//
 
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // end EXAMPM_SOLVER2_HPP
+#endif // end MLC_SOLVER2_HPP

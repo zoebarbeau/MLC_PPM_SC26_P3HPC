@@ -1,18 +1,18 @@
-/* This File is reproduced from the ExaMPM Library */
+/* This File is reproduced from the MLC Library */
 /****************************************************************************
- * Copyright (c) 2018-2020 by the ExaMPM authors                            *
+ * Copyright (c) 2018-2020 by the MLC authors                            *
  * All rights reserved.                                                     *
  *                                                                          *
- * This file is part of the ExaMPM library. ExaMPM is distributed under a   *
+ * This file is part of the MLC library. MLC is distributed under a   *
  * BSD 3-clause license. For the licensing terms see the LICENSE file in    *
  * the top-level directory.                                                 *
  *                                                                          *
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#include <ExaMPM_Mesh.hpp>
+#include <MLC_Mesh.hpp>
 
-namespace ExaMPM
+namespace MLC
 {
 //---------------------------------------------------------------------------//
 template class Mesh<Kokkos::HostSpace>;
@@ -23,4 +23,4 @@ template class Mesh<Kokkos::CudaSpace>;
 
 //---------------------------------------------------------------------------//
 
-} // end namespace ExaMPM
+} // end namespace MLC

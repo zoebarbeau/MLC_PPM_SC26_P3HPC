@@ -1,16 +1,16 @@
 /* This file is written by the authors specifically for MLC */
-#ifndef EXAMPM_REMAP_HPP
-#define EXAMPM_REMAP_HPP
+#ifndef MLC_REMAP_HPP
+#define MLC_REMAP_HPP
 
-#include <ExaMPM_MLC_Interp.hpp>
-#include <ExaMPM_ProblemManager2.hpp>
+#include <MLC_MLC_Interp.hpp>
+#include <MLC_ProblemManager2.hpp>
 #include <Cabana_Grid.hpp>
-#include <ExaMPM_GridManager.hpp>
+#include <MLC_GridManager.hpp>
 #include <Kokkos_Core.hpp>
 #include <cmath>
 #include <vector>
 #include <array>
-namespace ExaMPM
+namespace MLC
 {
 namespace Remap
 {
@@ -333,6 +333,6 @@ void Test_Remap_Particles( const ExecutionSpace& exec_space, ProblemManagerType&
 }
 */
 } // end namespace REMAP
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // EXAMPM_REMAP_HPP
+#endif // MLC_REMAP_HPP

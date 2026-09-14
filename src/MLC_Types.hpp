@@ -10,12 +10,12 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef EXAMPM_TYPES_HPP
-#define EXAMPM_TYPES_HPP
+#ifndef MLC_TYPES_HPP
+#define MLC_TYPES_HPP
 
 #include <Cabana_Grid.hpp>
 
-namespace ExaMPM
+namespace MLC
 {
 //---------------------------------------------------------------------------//
 // Logical dimension index.
@@ -23,6 +23,6 @@ using Dim = Cabana::Grid::Dim;
 
 //---------------------------------------------------------------------------//
 
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // EXAMPM_TYPES_HPP
+#endif // MLC_TYPES_HPP

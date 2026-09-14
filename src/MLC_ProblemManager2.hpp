@@ -1,16 +1,16 @@
-/* This File is reproduced from the ExaMPM Library */
-#ifndef EXAMPM_PROBLEMMANAGER2_HPP
-#define EXAMPM_PROBLEMMANAGER2_HPP
+/* This File is reproduced from the MLC Library */
+#ifndef MLC_PROBLEMMANAGER2_HPP
+#define MLC_PROBLEMMANAGER2_HPP
 
-#include <ExaMPM_Mesh.hpp>
-#include <ExaMPM_ParticleInit.hpp>
-#include <ExaMPM_GreensFunction.hpp>
+#include <MLC_Mesh.hpp>
+#include <MLC_ParticleInit.hpp>
+#include <MLC_GreensFunction.hpp>
 #include <Cabana_Core.hpp>
 #include <Cabana_Grid.hpp>
 
 #include <memory>
 
-namespace ExaMPM
+namespace MLC
 {
 //---------------------------------------------------------------------------//
 // Field locations
@@ -393,6 +393,6 @@ class ProblemManager
 
 //---------------------------------------------------------------------------//
 
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // end EXAMPM_PROBLEMMANAGER2_HPP
+#endif // end MLC_PROBLEMMANAGER2_HPP

@@ -1,4 +1,4 @@
-/* This file is modified from the ExaMPM Library */
+/* This File is modified from the ExaMPM Library */
 /****************************************************************************
  * Copyright (c) 2018-2020 by the ExaMPM authors                            *
  * All rights reserved.                                                     *
@@ -10,10 +10,11 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef EXAMPM_PARTICLEINIT_HPP
-#define EXAMPM_PARTICLEINIT_HPP
 
-#include <ExaMPM_Types.hpp>
+#ifndef MLC_PARTICLEINIT_HPP
+#define MLC_PARTICLEINIT_HPP
+
+#include <MLC_Types.hpp>
 
 #include <Cabana_Core.hpp>
 #include <Cabana_Grid.hpp>
@@ -21,7 +22,7 @@
 #include <Kokkos_Core.hpp>
 #include <Kokkos_Random.hpp>
 
-namespace ExaMPM
+namespace MLC
 {
 //---------------------------------------------------------------------------//
 // Filter out empty particles that weren't created.
@@ -298,4 +299,4 @@ void remapParticles( const ExecutionSpace& exec_space,
 //    std::cout << "filter empties" << std::endl;
 }
 }
-#endif // end EXAMPM_PARTICLEINIT_HPP
+#endif // end MLC_PARTICLEINIT_HPP

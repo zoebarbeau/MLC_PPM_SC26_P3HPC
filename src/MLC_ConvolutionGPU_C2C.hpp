@@ -1,6 +1,6 @@
 /* This file is written by the authors specifically for MLC */
 //
-// c2c (complex-to-complex) variant of ExaMPM_ConvolutionGPU.hpp, which runs
+// c2c (complex-to-complex) variant of MLC_ConvolutionGPU.hpp, which runs
 // successfully on H100. Kept on the SAME fftx3.hpp/interface.hpp API and the
 // SAME args-construction idiom (static locals, address-of in the args
 // vector) as the working file, since that idiom is what this older API
@@ -16,14 +16,14 @@
 // under the old API at all), swap the include/class names below accordingly
 // -- that in itself would be useful diagnostic info.
 //
-#ifndef EXAMPM_CONVOLUTIONGPU_C2C_HPP
-#define EXAMPM_CONVOLUTIONGPU_C2C_HPP
+#ifndef MLC_CONVOLUTIONGPU_C2C_HPP
+#define MLC_CONVOLUTIONGPU_C2C_HPP
 
-#include <ExaMPM_MLC_Interp.hpp>
-#include <ExaMPM_ProblemManager2.hpp>
+#include <MLC_MLC_Interp.hpp>
+#include <MLC_ProblemManager2.hpp>
 #include <Cabana_Grid.hpp>
-#include <ExaMPM_GreensFunction.hpp>
-#include <ExaMPM_GridManager.hpp>
+#include <MLC_GreensFunction.hpp>
+#include <MLC_GridManager.hpp>
 #include <Kokkos_Core.hpp>
 #include <cmath>
 #include <iostream>
@@ -40,7 +40,7 @@
 #include "fftximddftObj.hpp"
 #include "fftximdprdftObj.hpp"
 
-namespace ExaMPM
+namespace MLC
 {
 namespace ConvolutionGPU
 {

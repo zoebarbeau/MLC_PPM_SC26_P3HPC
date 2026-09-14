@@ -1,12 +1,12 @@
 /* This file is written by the authors specifically for MLC */
-#ifndef EXAMPM_RK4_HPP
-#define EXAMPM_RK4_HPP
+#ifndef MLC_RK4_HPP
+#define MLC_RK4_HPP
 
-#include <ExaMPM_ProblemManager2.hpp>
+#include <MLC_ProblemManager2.hpp>
 #include <Cabana_Grid.hpp>
 #include <Kokkos_Core.hpp>
 #include <cmath>
-namespace ExaMPM
+namespace MLC
 {
 namespace RK4
 {
@@ -183,6 +183,6 @@ void increment( const ExecutionSpace& exec_space, const ProblemManagerType& pm, 
 */
 
 } // end namespace LocalCorrection
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // EXAMPM_LocalCorrection_HPP
+#endif // MLC_LocalCorrection_HPP

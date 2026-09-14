@@ -10,12 +10,13 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef EXAMPM_DENSELINEARALGEBRA_HPP
-#define EXAMPM_DENSELINEARALGEBRA_HPP
+
+#ifndef MLC_DENSELINEARALGEBRA_HPP
+#define MLC_DENSELINEARALGEBRA_HPP
 
 #include <Kokkos_Core.hpp>
 
-namespace ExaMPM
+namespace MLC
 {
 namespace DenseLinearAlgebra
 {
@@ -108,6 +109,6 @@ KOKKOS_INLINE_FUNCTION void transpose( const Real a[3][3],
 //---------------------------------------------------------------------------//
 
 } // end namespace DenseLinearAlgebra
-} // end namespace ExaMPM
+} // end namespace MLC
 
-#endif // end EXAMPM_DENSELINEARALGEBRA_HPP
+#endif // end MLC_DENSELINEARALGEBRA_HPP
