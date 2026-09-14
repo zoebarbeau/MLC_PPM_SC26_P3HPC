@@ -25,13 +25,9 @@
 #include <ExaMPM_Remap.hpp>
 #include <ExaMPM_RK4.hpp>
 #include <mpi.h>
-//#include "FFTXLGFConvolution.H"
-//#include <ExaMPM_NVIDIA_ConvolutionGPU_Test.hpp>
-//#include <ExaMPM_ConvolutionGPU.hpp>
 #include <ExaMPM_ConvolutionGPU_C2C.hpp>
 #include <fstream>
 #include <iomanip>
-//#include <nvToolsExt.h>
 namespace ExaMPM
 {
 //---------------------------------------------------------------------------//
