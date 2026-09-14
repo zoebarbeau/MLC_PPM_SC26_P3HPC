@@ -170,7 +170,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
                                   double xg[3] = { ci*h - center, cj*h - center, ck*h - center};    
                                   double K[3];
                                   //Calculate Green's Function
-                                  GreensFunction::Calculate_qK_MatVec_Fused(xg, xp, vortp, K,hp);
+                                  GreensFunction::Calculate_qK(xg, xp, vortp, K, hp, corr_radius);
                                   for(int d = 0; d < 3; d++){
         
                                      vel_loc[ci-imin][cj-jmin][ck-kmin][d] += K[d]; 

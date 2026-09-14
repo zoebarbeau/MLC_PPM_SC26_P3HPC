@@ -52,6 +52,7 @@ class Solver : public SolverBase
         , _bc( bc )
         , _halo_min( 0 )
 	, _center( center)
+        , _run( run)
     {
 
 	 //Width of the domain
@@ -101,8 +102,6 @@ class Solver : public SolverBase
 
        //Sort the list
         Cabana::permute(*_neigh_list,_pm->_particles);
- 
-
 
 	//1x1x1 linked cell stencil that defines Pi, the # particles associated with grid point i/its cell
         _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
@@ -154,26 +153,60 @@ class Solver : public SolverBase
          double calls = 15;
          for(int i = 0; i < 15; i++){
 
-               Kokkos::Timer timer;
-               LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
-               Kokkos::fence();
-               timeD += timer.seconds() / calls;
-               ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
+           if ( 0 == run.compare( "Base" ) ||
+                0 == run.compare( "base" ) ||
+                0 == run.compare( "BASE" ) )
+              {
+   
+                  Kokkos::Timer timer;
+                  LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
+                  Kokkos::fence();
+                  timeD += timer.seconds() / calls;
+                  ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
 
-               timer.reset();
-               LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
-                                        extent,center,cell_size, hp, corr_radius);
+                  timer.reset();
+                  LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
+                                           extent,center,cell_size, hp, corr_radius);
 
-               Kokkos::fence();
-               timeCorr += timer.seconds() / calls;
+                  Kokkos::fence();
+                  timeCorr += timer.seconds() / calls;
 
-               timer.reset();
+                  timer.reset();
 
-               LocalCorrection::Interaction_NBody(ExecutionSpace(),positions,u,vort,advect_vort, *_neigh_list, c, center, cell_size, hp, corr_radius,numP );
-               Kokkos::fence();
-               timeInt += timer.seconds() / calls;
-               timer.reset();
+                  LocalCorrection::Interaction_NBody(ExecutionSpace(),positions,u,vort,advect_vort, *_neigh_list, c, center, cell_size, hp, corr_radius,numP );
+                  Kokkos::fence();
+                  timeInt += timer.seconds() / calls;
+                  timer.reset();
 
+               }
+
+            if ( 0 == run.compare( "Optimization1" ) ||
+                0 == run.compare( "optimization1" ) ||
+                0 == run.compare( "OPTIMIZATION1" ) )
+              {
+
+                  Kokkos::Timer timer;
+                  LocalCorrection::Deposition_TeamPolicy_optimized(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
+                  Kokkos::fence();
+                  timeD += timer.seconds() / calls;
+                  ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
+
+                  timer.reset();
+                  LocalCorrection::Corrections_Split(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
+                   extent,center,cell_size, hp, corr_radius);
+
+                  Kokkos::fence();
+                  timeCorr += timer.seconds() / calls;
+
+                  timer.reset();
+
+                  LocalCorrection::Interaction_NBody_Split(ExecutionSpace(), positions, u, vort, advect_vort, *_neigh_list, hp, numP);
+                  Kokkos::fence();
+                  timeInt += timer.seconds() / calls;
+                  timer.reset();
+
+               }
+               
                //Error Check
                if( i == 0 ){
                   LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
@@ -227,6 +260,7 @@ class Solver : public SolverBase
     double _time;
     int _step, corr_radius;
     BoundaryCondition _bc;
+    std::string& run;
     int _halo_min;
     std::shared_ptr<Mesh<MemorySpace>> _mesh, _pmesh;
     std::shared_ptr<ProblemManager<MemorySpace>> _pm;
@@ -253,7 +287,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
               const Cabana::Grid::BlockPartitioner<3>& partitioner,
               const int halo_cell_width, const InitFunc& create_functor,
               const int particles_per_cell, const double cell_size, const double hp, const double center,
-	      BoundaryCondition& bc)
+	      BoundaryCondition& bc, const std::string& run )
 {
     if ( 0 == exec_space.compare( "serial" ) ||
          0 == exec_space.compare( "Serial" ) ||
@@ -263,7 +297,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             MLC::Solver<Kokkos::HostSpace, Kokkos::Serial>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run );
 #else
         throw std::runtime_error( "Serial Backend Not Enabled" );
 #endif
@@ -276,7 +310,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             MLC::Solver<Kokkos::HostSpace, Kokkos::OpenMP>>(
             comm, global_bounding_box, global_num_cell,pgrid_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run );
 #else
         throw std::runtime_error( "OpenMP Backend Not Enabled" );
 #endif
@@ -289,7 +323,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             MLC::Solver<Kokkos::CudaSpace, Kokkos::Cuda>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run );
 #else
         throw std::runtime_error( "CUDA Backend Not Enabled" );
 #endif
@@ -302,7 +336,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<MLC::Solver<Kokkos::Experimental::HIPSpace,
                                                Kokkos::Experimental::HIP>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run );
 #else
         throw std::runtime_error( "HIP Backend Not Enabled" );
 #endif

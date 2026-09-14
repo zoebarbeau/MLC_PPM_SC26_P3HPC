@@ -1,5 +1,5 @@
-#include <ExaMPM_BoundaryConditions.hpp>
-#include <ExaMPM_Solver2.hpp>
+#include <MLC_BoundaryConditions.hpp>
+#include <MLC_Solver2.hpp>
 
 #include <Cabana_Core.hpp>
 
@@ -105,17 +105,17 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     Cabana::Grid::ManualBlockPartitioner<3> partitioner( ranks_per_dim );
 
     // Free slip conditions (alternative: NO_SLIP)
-    ExaMPM::BoundaryCondition bc;
-    bc.boundary[0] = ExaMPM::BoundaryType::NO_SLIP;
-    bc.boundary[1] = ExaMPM::BoundaryType::NO_SLIP;
-    bc.boundary[2] = ExaMPM::BoundaryType::NO_SLIP;
-    bc.boundary[3] = ExaMPM::BoundaryType::NO_SLIP;
-    bc.boundary[4] = ExaMPM::BoundaryType::NO_SLIP;
-    bc.boundary[5] = ExaMPM::BoundaryType::NO_SLIP;
+    MLC::BoundaryCondition bc;
+    bc.boundary[0] = MLC::BoundaryType::NO_SLIP;
+    bc.boundary[1] = MLC::BoundaryType::NO_SLIP;
+    bc.boundary[2] = MLC::BoundaryType::NO_SLIP;
+    bc.boundary[3] = MLC::BoundaryType::NO_SLIP;
+    bc.boundary[4] = MLC::BoundaryType::NO_SLIP;
+    bc.boundary[5] = MLC::BoundaryType::NO_SLIP;
     double t_final =  0.005; 
     int write_freq = 1;
     // Solve the problem.
-    auto solver = ExaMPM::createSolver(
+    auto solver = MLC::createSolver(
         exec_space, MPI_COMM_WORLD, global_box, global_num_cell,pgrid_num_cell, periodic,
         partitioner, halo_size, ParticleInitFunc( cell_size, hp ),ppc,cell_size,hp,center,bc);
     solver->solve( t_final, write_freq,center,c,cell_size,hp );
@@ -131,22 +131,16 @@ int main( int argc, char* argv[] )
     // check inputs and write usage
     if ( argc < 5 )
     {
-        std::cerr << "Usage: ./init_grid cell_size parts_per_cell_size "
-                     "halo_cells exec_space vorticity\n";
+        std::cerr << "Usage: ./init_grid cell_size "
+                     "exec_space particle_cell_size type_of_run \n";
         std::cerr << "\nwhere cell_size       edge length of a computational "
                      "cell (domain is unit cube)\n";
-        std::cerr
-            << "      parts_per_cell  particles per cell in each direction\n";
-        std::cerr << "      halo_cells      number of halo cells\n";
-        std::cerr << "      dt              time step size\n";
-        std::cerr << "      t_end           simulation end time\n";
-        std::cerr
-            << "      write_freq      number of steps between output files\n";
         std::cerr << "      exec_space      execute with: serial, openmp, "
                      "cuda, hip\n";
-	std::cerr << "\nwhere hp       edge length of a computational "
+	std::cerr << "\nwhere hp edge length of a computational "
                      "cell for particle deposition\n";
-        std::cerr << "\nfor example: ./init_grid 0.05 2 0 serial 0.025\n";
+        std::cerr << "\nwhere type_of_run specifies the optimization: Base, Optimization1 (Split Kernels)"
+        std::cerr << "\nfor example: ./init_grid 0.03125 cuda 0.03125 Base\n";
         Kokkos::finalize();
         MPI_Finalize();
         return 0;
@@ -156,39 +150,21 @@ int main( int argc, char* argv[] )
     double cell_size = std::atof( argv[1] );
 
     // particles per cell in a dimension
-    int ppc = std::atoi( argv[2] );
+    int ppc = 1.0; 
 
     // number of halo cells.
-    int halo_size = std::atoi( argv[3] );
+    int halo_size = 0.0;
+ 
     // execution space
-    std::string exec_space( argv[4] );
+    std::string exec_space( argv[2] );
 
-    //vorticity
-    //
-    double hp = std::atof( argv[5] );
+    double hp = std::atof( argv[3] );
 
-    // // Convolution
-    // double *input = new double[10*10*10];
-    // double *output = new double[10*10*10];
-    // std::complex<double> *symbol = new std::complex<double>[10*10*10];
-    // //Vector of void pointers
-    // std::vector<void*> args{output, input, symbol};
-    // std::vector<int> sizes{10,10,10};
-
-    // //rconv class
-    // RCONVProblem conv{args, sizes, "rconv"};
-    // // For Pruned change class name RCONV, "rconv" and add the correct obj file at the top
-
-    // // Run the transform
-    // conv.transform();
-
-         // Push NVTX range to start profiling at the right time
-//    nvtxRangePush("Main Start");
-
+    std::string type_run( argv[4]);
+   
     // run the problem.
-    initgrid( cell_size, ppc, halo_size, exec_space, hp );
+    initgrid( cell_size, ppc, halo_size, exec_space, hp, type_run );
 
-//    nvtxRangePop(); // end main start range
 
     Kokkos::finalize();
 
