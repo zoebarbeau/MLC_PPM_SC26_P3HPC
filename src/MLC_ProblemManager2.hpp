@@ -139,6 +139,7 @@ class ProblemManager
             _pmesh->localGrid(), 3, Cabana::Grid::Node() );
 
 
+       // Grid arrays for velocity, vorticity, and F
         _velocity = Cabana::Grid::createArray<double, MemorySpace>(
             "velocity", node_vector_layout );
         _vorticity = Cabana::Grid::createArray<double, MemorySpace>(
@@ -146,6 +147,7 @@ class ProblemManager
 	_F = Cabana::Grid::createArray<double, MemorySpace>(
             "F", node_vector_layout );
 
+       // Debugging Output Arrays
         _vorticity_hp = Cabana::Grid::createArray<double, MemorySpace>(
             "vorticity_hp", pnode_vector_layout );
 
@@ -164,21 +166,19 @@ class ProblemManager
         _node_gather_halo = Cabana::Grid::createHalo(
             Cabana::Grid::NodeHaloPattern<3>(), -1, *_velocity,*_vorticity );
 
+        //Visualization
         std::array<std::string, 4> names;
         names[0] = "F"; names[1] = "lap_u";
         names[2] = "pre_corr_v"; names[3] = "post_corr_v";
 
-//      Cabana::deep_copy(_particles0,_particles);
-//     Cabana::deep_copy(_particlesK,_particles);
-        // create an array and store the name of each variable:
-
-	// Particle Deposition Grid Layout
     }
 
+    //Number of Particles
     std::size_t numParticle() const { return _particles.size(); }
 
     const std::shared_ptr<mesh_type>& mesh() const { return _mesh; }
 
+    // Location of Particles for Different Types
     typename particle_list::template member_slice_type<1>
     get( Location::Particle, Field::Velocity ) const
     {
@@ -253,6 +253,7 @@ class ProblemManager
         return Cabana::slice<3>( _particles0, "vorticity_advect" );
     }
 
+    // Location on the grid for different variables
     typename node_array::view_type get( Location::Node, Field::Vorticity ) const
     {
         return _vorticity->view();
@@ -291,13 +292,6 @@ class ProblemManager
     }
 
 
-    // WHAT IS SCATTER FOR
- /*   void scatter( Location::Cell ) const
-    {
-        _cell_halo->scatter( execution_space(),
-                             Cabana::Grid::ScatterReduce::Sum(), *_vorticity );
-    }
-*/
     //Changed Scatter operation to replace instead of sum
     void scatter( Location::Node ) const
     {
@@ -317,6 +311,7 @@ class ProblemManager
                                            _particles, minimum_halo_width );
     }
 
+    // Remapping functionality
     template <class InitFunc, class ExecutionSpace>
     void Resize_Remap(const ExecutionSpace& exec_space, 
 		      const InitFunc& create_functor ) 
@@ -324,7 +319,6 @@ class ProblemManager
 
        auto vorticity_g = get( Location::Node(), Field::Vorticity_hp());
        _particles.resize( 0 );
-    //   _particles.shrinkToFit();
        remapParticles( exec_space, *( _pmesh->localGrid() ),
                              _ppc, create_functor, _vorticity_hp, _particles,
 		             _center, _hp, _extentp);
@@ -332,18 +326,10 @@ class ProblemManager
 
     }	    
 
+    // RK4 initialization
     void initRK4( )
     {
 
-/*      auto p_1 = Cabana::slice<0>( _particles);
-!       auto p_2 = Cabana::slice<1>( _particles);
-        auto p_3 = Cabana::slice<2>( _particles);
-        auto p_4 = Cabana::slice<3>( _particles);
-        Cabana::deep_copy(p_1, 0.0);
-        Cabana::deep_copy(p_2, 0.0);
-        Cabana::deep_copy(p_3, 0.0);
-        Cabana::deep_copy(p_4, 0.0);
-*/
         auto q_1 = Cabana::slice<0>( _particlesK);
         auto q_2 = Cabana::slice<1>( _particlesK);
         auto q_3 = Cabana::slice<2>( _particlesK);
@@ -354,7 +340,7 @@ class ProblemManager
         Cabana::deep_copy(q_4, 0.0);
     }
 
-   
+    // Visualization
     KOKKOS_INLINE_FUNCTION
     void save_F(std::string run_name, const int timesteps_done, const double time) const
     {   std::stringstream name;
@@ -363,7 +349,7 @@ class ProblemManager
         Cabana::Grid::Experimental::BovWriter::writeTimeStep(prefix,timesteps_done, time, *_Fx);
     }
 
-
+    //Visualization
     KOKKOS_INLINE_FUNCTION
     void save_v(std::string run_name, const int timesteps_done, const double time) const
     {   std::stringstream name;
@@ -387,7 +373,6 @@ class ProblemManager
     std::shared_ptr<halo> _node_gather_halo;
     std::shared_ptr<halo> _node_correction_halo;
     std::shared_ptr<halo> _cell_halo;
-//    std::shared_ptr<mesh_type> _mesh;
 
 };
 

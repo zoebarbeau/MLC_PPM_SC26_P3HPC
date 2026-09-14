@@ -115,7 +115,6 @@ void increment( const ExecutionSpace& exec_space, const ProblemManagerType& pm, 
              x_pk(p,d)   += k_increment*dt*u_p(p,d);
              vort_pk(p,d) += k_increment*dt*advect_vorticity(p,d);
             
-//               Kokkos::printf(" x_pk %e vort_pk %e vort_pk %e \n", x_pk(p,0),vort_pk(p,0),vort_pk(p,1) );
 
            }
      });
@@ -141,14 +140,12 @@ void increment( const ExecutionSpace& exec_space, const ProblemManagerType& pm, 
              
              x_pk(p,d)    = 0.0;
              vort_pk(p,d) = 0.0;
-//             u_pk(p,d)     = 0.0;
              
              advect_vorticity(p,d) = 0.0;
 
 
 
            }
-//             Kokkos::printf(" x_p %e vort_p %e Final \n", x_p(p,0),vort_p(p,0) );
 
         });
 
@@ -164,23 +161,6 @@ void increment( const ExecutionSpace& exec_space, const ProblemManagerType& pm, 
 
 }
 
-/*
-    //Time Advance dxp/dt = up
-    m_delta.init(a_state);
-    m_k.init(a_state);                  // init must allocate stroage, and initialize it to zero.
-    m_f(m_k, a_time, a_dt, a_state);    // compute k1
-    m_delta.increment(sixth, m_k);
-    m_k*=half;
-    m_f(m_k, a_time+half*a_dt, a_dt, a_state);  // compute k2
-    m_delta.increment(third, m_k);
-    m_k*=half;
-    m_f(m_k, a_time+half*a_dt, a_dt, a_state);  // conpute k3
-    m_delta.increment(third, m_k);
-    m_f(m_k, a_time+a_dt, a_dt, a_state); // compute k4
-    m_delta.increment(sixth, m_k);
-    a_state.increment(m_delta);
-}
-*/
 
 } // end namespace LocalCorrection
 } // end namespace MLC

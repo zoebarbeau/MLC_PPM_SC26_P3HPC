@@ -17,51 +17,6 @@ namespace GreensFunction
 //---------------------------------------------------------------------------//
 // Particle-to-grid.
 //
-/*KOKKOS_INLINE_FUNCTION
-__attribute__((always_inline))
-void Calculate_qK(const double xp[3],const double xq[3], const double up[3], double K[3],const double h, const int corr_radius)
-{
-   double r = pow( pow( xp[0] - xq[0], 2) + pow( xp[1] - xq[1], 2) + pow( xp[2] - xq[2], 2), 0.5);
-   double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
-                        { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
-                        { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
-   double delta = pow(2,0.5)*h/2;
-   if( r < (delta - 1e-10)) 
-   {
-   
-
-       
-      for(int d0 = 0; d0 < 3; d0++){
-         for(int d1 = 0; d1 < 3; d1++){
-
-
-           K_M[d0][d1] *= 1.0/8.0 * ( -12.0*(r*r / (delta*delta) ) + 20 ) / (delta*delta*delta) * 1.0/(4.0*Kokkos::numbers::pi); //1.0/(4.0*Kokkos::numbers::pi)*(-3.0*pow(r/delta, 4.0) + 10.0*pow(r/delta,2.0) - 7.0 ) / 60.0; //(4-3*r/pow(delta, 3.0));
-        }
-
-      }
-
-       
-      
-      DenseLinearAlgebra::matVecMultiply(K_M, up, K);
-
-
-   }else
-   {
-      for(int d0 = 0; d0 < 3; d0++){
-         for(int d1 = 0; d1 < 3; d1++){
-
-	 
-           K_M[d0][d1] *= 1.0/(4.0*Kokkos::numbers::pi*pow(r, 3.0) );
-        }
- 
-      }
-
-      DenseLinearAlgebra::matVecMultiply(K_M, up, K);
-   }
-
-
-}
-*/
 KOKKOS_INLINE_FUNCTION
 void Calculate_qK_MatVec_Fused(
     const double xp[3], const double xq[3],
@@ -79,7 +34,7 @@ void Calculate_qK_MatVec_Fused(
     const double dz = xp[2] - xq[2];
     const double r2 = dx*dx + dy*dy + dz*dz;
 
-    // FIXED: Near-field FIRST (matches original logic)
+    // Near-field FIRST 
     if ( r2 < delta2 && r2 > 1e-24 )  // ← FIX #1: Changed >= to <
     {
         const double r = Kokkos::sqrt(r2);
@@ -156,41 +111,6 @@ void Calculate_qK( const double xp[3], const double xq[3],
     DenseLinearAlgebra::matVecMultiply( K_M, up, K );
 }
 
-KOKKOS_INLINE_FUNCTION
-void CalculateK(const double xp[3],const double xq[3], double K[9])
-{
-   double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);
-   double K_M[3][3] = { { 0, (xp[2] - xq[2]), -1*(xp[1] - xq[1])},
-                        { -1*(xp[2] - xq[2]), 0, (xp[0] - xq[0])},
-                        { (xp[1] - xq[1]), -1*(xp[0] - xq[0]), 0} };
-
-      for(int d0 = 0; d0 < 3; d0++){
-         for(int d1 = 0; d1 < 3; d1++){
-
-            if(r < 1.0e-9){
-               K[d0*3 + d1] = 0.0;
-            }
-            else{
-               K[d0*3 + d1] = K_M[d0][d1] * 1.0/(4.0*Kokkos::numbers::pi*pow(r, 3.0) );
-               // printf("K[%d] = %f \n", d0*3+d1, K[d0*3+d1]);
-            }
-	          
-        }
-      }
-
-}
-KOKKOS_INLINE_FUNCTION
-void Calculate_scalarK(const double xp[3],const double xq[3], double* scal_K)
-{
-   double r = pow( pow( xp[0] - xq[0], 2.0) + pow( xp[1] - xq[1], 2.0) + pow( xp[2] - xq[2], 2.0), 0.5);
-   if(r < 1.0e-9){
-      *scal_K = 0.0;
-   }
-   else{
-      *scal_K = 1.0/(4.0*Kokkos::numbers::pi*pow(r, 3.0) );
-      // printf("K = %f \n", *scal_K);
-   }
-}
 
 } // end namespace GREENS FUNCTION
 } // end namespace MLC

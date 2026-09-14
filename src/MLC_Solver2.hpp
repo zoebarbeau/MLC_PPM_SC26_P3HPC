@@ -36,7 +36,6 @@ class Solver : public SolverBase
    using ListType = Cabana::LinkedCellList<MemorySpace,double>;	 
    std::shared_ptr<Cabana::LinkedCellList<MemorySpace,double>> _neigh_list, _Ci_grid_list, _W44_list;
    
-//      using neigh_list_type = Cabana::LinkedCellList<MemorySpace, double>;
 
     template <class InitFunc>
     Solver( MPI_Comm comm, const Kokkos::Array<double, 6>& global_bounding_box,
@@ -70,10 +69,12 @@ class Solver : public SolverBase
         _bc.max = _mesh->maxDomainGlobalNodeIndex();
 
 
+        // data management
         _pm = std::make_shared<ProblemManager<MemorySpace>>(
             ExecutionSpace(), _mesh, _pmesh, create_functor, particles_per_cell,
 	    cell_size, _center, hp, extent,extentp);
 
+        // Setting up grid
 
 	double grid_min[3] = { 0,
                                0,
@@ -89,30 +90,22 @@ class Solver : public SolverBase
         double pgrid_delta[3] = {hp,hp,hp};
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
-        // 
+
+        // Correction radius, vary for different case. Also vary line 143 in MLC_LocalCorrections.cpp double: vel_loc[9][9][9][3]={0};
         corr_radius = 4.0;
 
 
-        //Real Particle Lists
-	//5x5x5 linked cell stencil of the particles used to calculate neighbor interactions
+        //Particle Lists
+	// linked cell stencil of the particles used to calculate neighbor interactions
        _neigh_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/corr_radius);
-       //We order the list
-        Cabana::permute(*_neigh_list,_pm->_particles);
 
-       
+       //Sort the list
+        Cabana::permute(*_neigh_list,_pm->_particles);
+ 
 
 
 	//1x1x1 linked cell stencil that defines Pi, the # particles associated with grid point i/its cell
         _oneGrid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(),grid_delta,grid_min,grid_max);
-
-
-
-
-	//7x7 W44 stencil linked list
-	//
-
-	double third = 1.0 / 3.0;
-//	_W44_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(positions,0, _pm->numParticle(), pgrid_delta, grid_min, grid_max, 3*hp, third);
 
 	//Define the number of points contained in D0 and D
 	num_D0 = (global_num_cell[0] + 1 - 2)*(global_num_cell[1] + 1 - 2)*(global_num_cell[2] + 1 - 2);
@@ -123,19 +116,13 @@ class Solver : public SolverBase
 	_gridp = std::make_shared<GridManager<MemorySpace>>(ExecutionSpace(),*(_mesh->localGrid()),positions,nump,num_D0, extent,cell_size,center);
 	LocalCorrection::update_GridList(ExecutionSpace(),*(_mesh->localGrid()),*_pm, *_gridp, nump, num_D0, extent, cell_size, center);
 
-
-
 	auto gridpositions = _gridp->get( Grid::Position() );
 	//These are particle lists including the grid points 
 	// 5x5x5 grid particle list for the correction radius
         _Ci_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,corr_radius*cell_size, 1.0/corr_radius);
 
-
-
         //1x1x1 grid particle list associated with grid cell i
         _Pi_grid_list = std::make_shared<Cabana::LinkedCellList<MemorySpace,double>>(gridpositions,0, nump+num_D0,grid_delta,grid_min,grid_max,cell_size, 1.0);
-
-
 
 	MPI_Comm_rank( comm, &_rank );
     }
@@ -143,77 +130,63 @@ class Solver : public SolverBase
     void solve( const double t_final, const int write_freq, const double center, const int c, const double cell_size, const double hp )
     {   
 
-          auto positions = _pm->get(Location::Particle(), Field::Position());
-	  auto u = _pm->get(Location::Particle(), Field::Velocity());
-	  auto vort = _pm->get(Location::Particle(), Field::Vorticity());
-	  auto advect_vort = _pm->get(Location::Particle(), Field::Vorticity_Advect());
-          int numP = _pm->numParticle();
+         auto positions = _pm->get(Location::Particle(), Field::Position());
+         auto u = _pm->get(Location::Particle(), Field::Velocity());
+         auto vort = _pm->get(Location::Particle(), Field::Vorticity());
+	 auto advect_vort = _pm->get(Location::Particle(), Field::Vorticity_Advect());
+         int numP = _pm->numParticle();
+     
+
+         // Output initial state.
+         _time = 0;
+         _dt   =0.0001953125;
+         double mddtime[45] = {0};
+         double imddtime[45] = {0};
+         double multiply[4]  = {0.5,0.5,1.0,0.0};
+         double increment[4] = {1.0/6.0,1.0/3.0,1.0/3.0,1.0/6.0};
+
+         using neighbor_traits =
+         Cabana::NeighborList<ListType>;
 
 
-//        ConvolutionFFTX<ExecutionSpace> FFTXConv(extent,center,cell_size);
-
-//        std::cout << "Construct Convolution Class" << std::endl;
-
-        std::string file="/home/zbarbeau/Hudson_P3M_H100/MLC_PPM/LatticeGreensFunction/exec/G_128_Octant";
-
- //       FFTXConv.read_LGF_file(file);
-
-        std::cout << "Read in file" << std::endl;
-        
-
-        // Output initial state.
-       _time = 0;
-       _dt   =0.0001953125;
-       double mddtime[45] = {0};
-       double imddtime[45] = {0};
-       double multiply[4]  = {0.5,0.5,1.0,0.0};
-       double increment[4] = {1.0/6.0,1.0/3.0,1.0/3.0,1.0/6.0};
-
-       using neighbor_traits =
-       Cabana::NeighborList<ListType>;
-
-
-       double timeCorr = 0, timeD = 0, timeInt = 0; 
-       double calls = 15;
-       while( _time <1* _dt ){
-
- //      _pm->initRK4();
-//        RK4::updateP(ExecutionSpace(),*_pm);
-
+         //Collect Timing for the four main kernels 
+         double timeCorr = 0, timeD = 0, timeInt = 0; 
+         double calls = 15;
          for(int i = 0; i < 15; i++){
 
-	     Kokkos::Timer timer;
-             LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
-             Kokkos::fence();
-	     timeD += timer.seconds() / calls;
-	     ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
+               Kokkos::Timer timer;
+               LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
+               Kokkos::fence();
+               timeD += timer.seconds() / calls;
+               ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
 
-	     timer.reset();
-             LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
-                                      extent,center,cell_size, hp, corr_radius);
+               timer.reset();
+               LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
+                                        extent,center,cell_size, hp, corr_radius);
 
-	     Kokkos::fence();
-             timeCorr += timer.seconds() / calls;
+               Kokkos::fence();
+               timeCorr += timer.seconds() / calls;
 
-	     timer.reset();
+               timer.reset();
 
-             LocalCorrection::Interaction_NBody(ExecutionSpace(),positions,u,vort,advect_vort, *_neigh_list, c, center, cell_size, hp, corr_radius,numP );
-             Kokkos::fence();
-             timeInt += timer.seconds() / calls;
-	     timer.reset();
+               LocalCorrection::Interaction_NBody(ExecutionSpace(),positions,u,vort,advect_vort, *_neigh_list, c, center, cell_size, hp, corr_radius,numP );
+               Kokkos::fence();
+               timeInt += timer.seconds() / calls;
+               timer.reset();
 
-	     if( i == 0 ){
-                LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
-	     }
-          }
+               //Error Check
+               if( i == 0 ){
+                  LocalCorrection::Error_V( ExecutionSpace(), *_pm, extent, cell_size, hp,*(_mesh->localGrid()));
+               }
+            }
 
-	  std::cout << timeD << std::endl;
-	  std::cout << timeCorr << std::endl;
-	  std::cout << timeInt << std::endl;
+            std::cout << timeD << std::endl;
+            std::cout << timeCorr << std::endl;
+            std::cout << timeInt << std::endl;
 
 
-         _time += _dt; 
-         _step += 1;
+           _time += _dt; 
+           _step += 1;
      }
      
 

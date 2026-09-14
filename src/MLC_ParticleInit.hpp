@@ -54,7 +54,6 @@ void filterEmpties( const ExecutionSpace& exec_space,
         } );
 
         
-    std::cout << " num particles 2" << num_particles << std::endl;
 
     // Compact the list so the it only has real particles.
     Kokkos::parallel_scan(
@@ -63,7 +62,6 @@ void filterEmpties( const ExecutionSpace& exec_space,
         KOKKOS_LAMBDA( const int i, int& count, const bool final_pass ) {
             if ( particle_created( i ) )
             {
-   //             Kokkos::printf( " particles created %d ", i);
                 if ( final_pass )
                 {
                     particles.setTuple( empties( count ),
@@ -140,13 +138,11 @@ void initializeParticles( const ExecSpace& exec_space,
     int num_particles = particles_per_cell * owned_cells.size();
     particles.resize( num_particles );
  
-    std::cout << " num particles init " << num_particles << std::endl;
     // Creation status.
     auto particle_created = Kokkos::View<bool*, memory_space>(
         Kokkos::ViewAllocateWithoutInitializing( "particle_created" ),
         num_particles );
 
-    std::cout << " hp particle initialize " << hp << std::endl;
     // Initialize particles.
     int local_num_create = 0;
     Kokkos::parallel_reduce(
@@ -154,11 +150,6 @@ void initializeParticles( const ExecSpace& exec_space,
         Cabana::Grid::createExecutionPolicy( owned_cells, exec_space ),
         KOKKOS_LAMBDA( const int i, const int j, const int k,
                        int& create_count ) {
-//    Cabana::Grid::grid_parallel_reduce(
-//        "uniform grid", exec_space, local_grid, Cabana::Grid::Ghost(),
- //       Cabana::Grid::Node(),
-//        KOKKOS_LAMBDA( const int i, const int j, const int k, int& create_count)
-//        {
             // Compute the owned local cell id.
             int i_own = i; // - owned_cells.min( Dim::I );
             int j_own = j; //- owned_cells.min( Dim::J );
@@ -166,10 +157,10 @@ void initializeParticles( const ExecSpace& exec_space,
             int cell_id = i + (extent+1)*( j + k*(extent+1));
 
 
-            // Particle.
+            // Particle and its postiion.
 	   double px[3];
             particle_type particle;
-           int pid = cell_id; // * particles_per_cell + ip +
+           int pid = cell_id; 
            // Set the particle position.
            px[0] = i_own * hp - center; //+ sqrt(0.5)* hp; //0.5 * spacing[Dim::I] +
                                      //ip * spacing[Dim::I] + low_coords[Dim::I];
@@ -188,13 +179,10 @@ void initializeParticles( const ExecSpace& exec_space,
            {
                             particles.setTuple( pid, particle );
                             ++create_count;
-         //                  Kokkos::printf(" PID %d ", pid);
            }
-                 //   }
         },
         local_num_create );
 
- //   std::cout << " created particles = " << local_num_create << std::endl;
     // Filter empties.
     filterEmpties( exec_space, local_num_create, particle_created, particles );
 }
@@ -216,7 +204,6 @@ void remapParticles( const ExecutionSpace& exec_space,
     // Kokkos memory space.
     using memory_space = typename ParticleList::memory_space;
 
-    // Particle type.
     // Particle type.
     using particle_type = typename ParticleList::tuple_type;
 
@@ -263,40 +250,27 @@ void remapParticles( const ExecutionSpace& exec_space,
             particle_type particle;
 
             // Local particle id.
-            int pid = cell_id; //* particles_per_cell + ip +
-                                 // particles_per_cell_dim *
-                                 //     ( jp + particles_per_cell_dim * kp );
+            int pid = cell_id; 
 
-                        // Set the particle position.
-            px[0] = i_own*hp - center; // 0.5 * spacing[Dim::I] +
-                                     //ip * spacing[Dim::I] + low_coords[Dim::I];
-            px[1] = j_own*hp - center; //0.5 * spacing[Dim::J] +
-                                   //  jp * spacing[Dim::J] + low_coords[Dim::J];
-            px[2] = k_own*hp - center; //0.5 * spacing[Dim::K] +
+            // Set the particle position.
+            px[0] = i_own*hp - center;
+            px[1] = j_own*hp - center; 
+            px[2] = k_own*hp - center; 
   
-			//  kp * spacing[Dim::K] + low_coords[Dim::K];
-
-			if( vorticity(i_own,j_own,k_own,0) > 0)
-			{
-
-
-			} 
-             // Create a new particle.
-             particle_created( pid ) = create_functor( px, vort, particle );
+            // Create a new particle.
+            particle_created( pid ) = create_functor( px, vort, particle );
                          
-             // If we created a new particle insert it into the list.
-             if ( particle_created( pid ) )
-             {   
+            // If we created a new particle insert it into the list.
+            if ( particle_created( pid ) )
+            {   
                  particles.setTuple( pid, particle );
                  ++create_count;
-              }
-                  //  }
+             }
         },
         local_num_create );
 
 
     filterEmpties( exec_space, local_num_create, particle_created, particles );
-//    std::cout << "filter empties" << std::endl;
 }
 }
 #endif // end MLC_PARTICLEINIT_HPP

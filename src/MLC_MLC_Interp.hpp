@@ -304,9 +304,6 @@ KOKKOS_INLINE_FUNCTION
 
 		 int  s = abs(s1) + abs(s2) + abs(s3);
 
-	//	 std::cout << " s1 = " << s1 << " s2 = " << s2 << " s3 " << s3 << std::endl;
-//		 std::cout << " s = " << s << std::endl;
-//                 Kokkos::printf(" view %f view %f view %f \n ", view(si,sj,sk,0),view(si,sj,sk,1),view(si,sj,sk,2));
 		  if( s == 1)
 	          {
                      
@@ -333,8 +330,6 @@ KOKKOS_INLINE_FUNCTION
 	      }	      
 
 
-//         Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>(0,3),
-//         KOKKOS_LAMBDA(const int d) {
         for(int d = 0; d < 3; d++)
         {
 
@@ -391,11 +386,6 @@ KOKKOS_INLINE_FUNCTION
                              + (3*xdiff2[2] - xdiff2[0])*xdiff[0]*fzzx
 			     + (3*xdiff2[2] - xdiff2[1])*xdiff[1]*fzzy)
 		    + xdiff[0]*xdiff[1]*xdiff[2]*fxyz;
-//	std::cout << "velocity interp " << view(i,j,k,d) << std::endl;
-/*	std::cout << " fx " << fx << " fy " << fy << " fz " << fz << std::endl;
-	std::cout << " fxx " << fxx << " fyy " << fyy << " fzz " << std::endl;
-	std::cout << " fxxy " << fxxy << " fxxz " << fxxz << " fyyx " << fyyx << " fyyz " << fyyz 
-		  << " fzzx " << fzzx << " fzzy " << fzzy << std::endl; */
     }
 }
 
