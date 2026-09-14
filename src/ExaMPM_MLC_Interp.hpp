@@ -1,4 +1,4 @@
-
+/* This file is written by the authors specifically for MLC */
 
 #ifndef EXAMPM_MLC_INTERP_HPP
 #define EXAMPM_MLC_INTERP_HPP

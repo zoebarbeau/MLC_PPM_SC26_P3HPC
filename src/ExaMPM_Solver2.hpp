@@ -1,14 +1,4 @@
-/****************************************************************************
- * Copyright (c) 2018-2020 by the ExaMPM authors                            *
- * All rights reserved.                                                     *
- *                                                                          *
- * This file is part of the ExaMPM library. ExaMPM is distributed under a   *
- * BSD 3-clause license. For the licensing terms see the LICENSE file in    *
- * the top-level directory.                                                 *
- *                                                                          *
- * SPDX-License-Identifier: BSD-3-Clause                                    *
- ****************************************************************************/
-
+/* This file is significantly modified from the ExaMPM Library */
 #ifndef EXAMPM_SOLVER2_HPP
 #define EXAMPM_SOLVER2_HPP
 
