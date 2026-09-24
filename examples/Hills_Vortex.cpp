@@ -11,7 +11,7 @@
 #include <mpi.h>
 #include <array>
 #include <cmath>
-//#include <nvToolsExt.h>
+
 //---------------------------------------------------------------------------//
 // Create the problem setup. The initial geometry is a static water column
 // from [0,0.4] in X, [0,0.6] in Z, with the entire Y domain filled.
