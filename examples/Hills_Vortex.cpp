@@ -75,7 +75,7 @@ struct ParticleInitFunc
 
 //---------------------------------------------------------------------------//
 void initgrid(const double cell_size, const int ppc, const int halo_size,
-               const std::string& exec_space, const double hp )
+               const std::string& exec_space, const double hp, const std::string& type_run )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
     Kokkos::Array<double, 6> global_box = { 0.0,0.0,0.0,1.0,1.0,1.0};
@@ -117,7 +117,7 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     // Solve the problem.
     auto solver = MLC::createSolver(
         exec_space, MPI_COMM_WORLD, global_box, global_num_cell,pgrid_num_cell, periodic,
-        partitioner, halo_size, ParticleInitFunc( cell_size, hp ),ppc,cell_size,hp,center,bc);
+        partitioner, halo_size, ParticleInitFunc( cell_size, hp ),ppc,cell_size,hp,center,bc,type_run);
     solver->solve( t_final, write_freq,center,c,cell_size,hp );
 }
 
@@ -139,7 +139,7 @@ int main( int argc, char* argv[] )
                      "cuda, hip\n";
 	std::cerr << "\nwhere hp edge length of a computational "
                      "cell for particle deposition\n";
-        std::cerr << "\nwhere type_of_run specifies the optimization: Base, Optimization1 (Split Kernels)"
+        std::cerr << "\nwhere type_of_run specifies the optimization: Base, Optimization1 (Split Kernels)\n";
         std::cerr << "\nfor example: ./init_grid 0.03125 cuda 0.03125 Base\n";
         Kokkos::finalize();
         MPI_Finalize();

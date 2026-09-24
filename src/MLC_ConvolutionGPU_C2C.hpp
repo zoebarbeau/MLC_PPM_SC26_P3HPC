@@ -47,7 +47,7 @@ namespace ConvolutionGPU
 //---------------------------------------------------------------------------//
 // Particle-to-grid.
 template <class ExecutionSpace, class ProblemManagerType>
-void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent,
+double Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& pm, const int extent,
                     const double center, const double h)
 {
   using Complex = Kokkos::complex<double>;
@@ -68,7 +68,12 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
 
   Kokkos::Timer timer;
   // Lattice Green's function
-  std::ifstream infileLGF("/home/zbarbeau/Hudson_P3M_H100/MLC_PPM/LatticeGreensFunction/exec/G_128_Octant");
+  // The LGF table lives in <MLC_PPM>/LatticeGreensFunction/exec, one level up from
+  // this header's src/ directory, so locate it relative to this file.
+  const std::string this_file = __FILE__;
+  const std::string src_dir = this_file.substr(0, this_file.find_last_of("/\\") + 1);
+  const std::string lgf_path = src_dir + "../LatticeGreensFunction/exec/G_128_Octant";
+  std::ifstream infileLGF(lgf_path);
   std::vector<double> lgf_values(domaindouble_x * domaindouble_y * domaindouble_z);
   if(infileLGF.is_open()){
     std::string line;
@@ -139,7 +144,7 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
     infileLGF.close();
   }
   else{
-    std::cout << "Unable to open file" << std::endl;
+    std::cout << "Unable to open LGF file: " << lgf_path << std::endl;
   }
 
   // Creating a host view for the LGF values
@@ -193,6 +198,9 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
   Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> out_normalize("norm_output_view", domaindouble_x * domaindouble_y * domaindouble_z);
   Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> conv_output("Final exatracted output", extent * extent * extent);
 
+  // Convolution time accumulated over the three velocity components, split as in
+  // the AMD version: F copy-in + forward DFT + pointwise multiply + inverse DFT + output
+  double time_final_conv = 0.0;
   for(int d = 0; d < 3; d++){
     timer.reset();
     Kokkos::parallel_for("Copy 4D to 1D", Kokkos::MDRangePolicy<ExecutionSpace, Kokkos::Rank<3>>(exec_space,{0, 0, 0}, {extent, extent, extent}),
@@ -214,6 +222,8 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
           KOKKOS_LAMBDA(const int i) {
               F1D_dd_cmplx[i] = Complex(F1D_domaindouble[i], 0.0);
           });
+    Kokkos::fence();
+    double timeparallel_f1dd = timer.seconds();
 
 /*    std::vector<void*> args2 = [&]() {
        static auto Fdft_data = F_dft.data();
@@ -229,6 +239,9 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
     std::vector<int> sizes2{domaindouble_x, domaindouble_y, domaindouble_z};
     MDDFTProblem c2cdft2{args2, sizes2, "mddft"};
     c2cdft2.transform();
+    double timeMDDFT = c2cdft2.getTime() * 0.001; // milliseconds to seconds
+
+    timer.reset();
 
     // Pointwise Multiply (full domain-doubled range, not half+1)
     Kokkos::parallel_for("Pointwise_multiply", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * domaindouble_z),
@@ -244,6 +257,8 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
 
                 pointwise_mul[i] = Complex(real_pw, img_pw);
             });
+    Kokkos::fence();
+    double timeptwise = timer.seconds();
 
     // Calculate the inverse dft to compute the final convolution value
 /*  std::vector<void*> args3 = [&]() {
@@ -260,6 +275,9 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
     std::vector<int> sizes3{domaindouble_x, domaindouble_y, domaindouble_z};
     IMDDFTProblem c2cidft{args3, sizes3, "imddft"};
     c2cidft.transform();
+    double timeInvMDDFT = c2cidft.getTime() * 0.001; // milliseconds to seconds
+
+    timer.reset();
 
     // Extracting the real part of the (complex) inverse DFT output
     Kokkos::parallel_for("Extract real part of inverse DFT", Kokkos::RangePolicy<ExecutionSpace>(exec_space,0,domaindouble_x * domaindouble_y * domaindouble_z),
@@ -286,8 +304,9 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
     double U = 1.0;
 
     Kokkos::fence();
-    double timerFFTX = timer.seconds();
-    std::cout << timerFFTX << " FFTX " << std::endl;
+    double time_conv_out = timer.seconds();
+
+    time_final_conv += timeparallel_f1dd + timeMDDFT + timeptwise + timeInvMDDFT + time_conv_out;
 
     Kokkos::parallel_for("Copy 1D to 3D", Kokkos::MDRangePolicy<Kokkos::Rank<3>>({0, 0, 0}, {N,N,N}),
           KOKKOS_LAMBDA(const int i, const int j, const int k) {
@@ -315,6 +334,8 @@ void Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType& p
      });
 
   }
+  Kokkos::fence();
+  return time_final_conv;
 }
 }
 }

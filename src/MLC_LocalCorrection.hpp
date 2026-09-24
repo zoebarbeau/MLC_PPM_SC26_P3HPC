@@ -291,8 +291,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    Kokkos::deep_copy( velocity_corr, 0.0);
    //Get relevant interpolation quantities 
    MLC_Interp::GridData<3> g( h, center);
-   PerfCounters counters("CorrectionsCounters"); 
-   pm.save_v( "Precorrection_V",1,0);
+
    Kokkos::parallel_for(
         "Corrections",
         Kokkos::RangePolicy<ExecutionSpace>( exec_space,0,num_grid ),

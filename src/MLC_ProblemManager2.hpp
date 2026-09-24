@@ -124,8 +124,6 @@ class ProblemManager
         initializeParticles( exec_space, *( _pmesh->localGrid() ),
                              particles_per_cell, create_functor, _particlesK,
                              _center, _hp,_extentp);
-	std::cout << " hp particle " << hp << std::endl;
-	std::cout << " _center particle " << _center << std::endl;
 
 	// Grid Layout
         auto node_vector_layout = Cabana::Grid::createArrayLayout(

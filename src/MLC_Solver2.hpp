@@ -149,7 +149,7 @@ class Solver : public SolverBase
 
 
          //Collect Timing for the four main kernels 
-         double timeCorr = 0, timeD = 0, timeInt = 0; 
+         double timeCorr = 0, timeD = 0, timeInt = 0, timeConv = 0;
          double calls = 15;
          for(int i = 0; i < 15; i++){
 
@@ -162,7 +162,7 @@ class Solver : public SolverBase
                   LocalCorrection::Deposition(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
                   Kokkos::fence();
                   timeD += timer.seconds() / calls;
-                  ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
+                  timeConv += ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size) / calls;
 
                   timer.reset();
                   LocalCorrection::Corrections(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
@@ -189,7 +189,7 @@ class Solver : public SolverBase
                   LocalCorrection::Deposition_TeamPolicy_optimized(ExecutionSpace(), *_pm, *_oneGrid_list,*_Ci_grid_list,*_gridp,num_D0,extent,center,cell_size,hp,corr_radius);
                   Kokkos::fence();
                   timeD += timer.seconds() / calls;
-                  ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size);
+                  timeConv += ConvolutionGPU::Conv_fftx_c2c(ExecutionSpace(), *_pm, extent, center, cell_size) / calls;
 
                   timer.reset();
                   LocalCorrection::Corrections_Split(ExecutionSpace(), *_pm, *_Ci_grid_list,*_oneGrid_list,*_neigh_list,*_gridp,num_D0,
@@ -213,9 +213,10 @@ class Solver : public SolverBase
                }
             }
 
-            std::cout << timeD << std::endl;
-            std::cout << timeCorr << std::endl;
-            std::cout << timeInt << std::endl;
+            std::cout << "Average Deposition time:   " << timeD << std::endl;
+            std::cout << "Average Convolution time:  " << timeConv << std::endl;
+            std::cout << "Average Corrections time:  " << timeCorr << std::endl;
+            std::cout << "Average Interactions time: " << timeInt << std::endl;
 
 
            _time += _dt; 

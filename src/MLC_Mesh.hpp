@@ -52,14 +52,12 @@ class Mesh
         double cell_size =
             ( global_bounding_box[3] - global_bounding_box[0] ) / num_cell[0];
 
-        std::cout << " cell size " << cell_size << std::endl;
         // Because the mesh is uniform check that the domain is evenly
         // divisible by the cell size in each dimension within round-off
         // error. This will let us do cheaper math for particle location.
         for ( int d = 0; d < 3; ++d )
         {
             double extent = num_cell[d] * cell_size;
-            std::cout << " extent " << extent << std::endl;
             if ( std::abs( extent - ( global_bounding_box[d + 3] -
                                       global_bounding_box[d] ) ) >
                  double( 10.0 ) * std::numeric_limits<double>::epsilon() )
