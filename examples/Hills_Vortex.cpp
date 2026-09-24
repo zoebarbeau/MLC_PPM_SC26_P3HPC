@@ -75,7 +75,8 @@ struct ParticleInitFunc
 
 //---------------------------------------------------------------------------//
 void initgrid(const double cell_size, const int ppc, const int halo_size,
-               const std::string& exec_space, const double hp, const std::string& type_run )
+               const std::string& exec_space, const double hp, const std::string& type_run,
+               const int corr_radius )
 {
     // The dam break domain is in a box on [0,1] in each dimension.
     Kokkos::Array<double, 6> global_box = { 0.0,0.0,0.0,1.0,1.0,1.0};
@@ -117,7 +118,7 @@ void initgrid(const double cell_size, const int ppc, const int halo_size,
     // Solve the problem.
     auto solver = MLC::createSolver(
         exec_space, MPI_COMM_WORLD, global_box, global_num_cell,pgrid_num_cell, periodic,
-        partitioner, halo_size, ParticleInitFunc( cell_size, hp ),ppc,cell_size,hp,center,bc,type_run);
+        partitioner, halo_size, ParticleInitFunc( cell_size, hp ),ppc,cell_size,hp,center,bc,type_run,corr_radius);
     solver->solve( t_final, write_freq,center,c,cell_size,hp );
 }
 
@@ -132,15 +133,16 @@ int main( int argc, char* argv[] )
     if ( argc < 5 )
     {
         std::cerr << "Usage: ./init_grid cell_size "
-                     "exec_space particle_cell_size type_of_run \n";
+                     "exec_space particle_cell_size type_of_run [corr_radius]\n";
         std::cerr << "\nwhere cell_size       edge length of a computational "
                      "cell (domain is unit cube)\n";
         std::cerr << "      exec_space      execute with: serial, openmp, "
                      "cuda, hip\n";
 	std::cerr << "\nwhere hp edge length of a computational "
                      "cell for particle deposition\n";
-        std::cerr << "\nwhere type_of_run specifies the optimization: Base, Optimization1 (Split Kernels)\n";
-        std::cerr << "\nfor example: ./init_grid 0.03125 cuda 0.03125 Base\n";
+        std::cerr << "\nwhere type_of_run specifies the optimization: Base, Optimization (Split Kernels)\n";
+        std::cerr << "\nwhere corr_radius (optional, default 4) is the correction radius in cells (1-6)\n";
+        std::cerr << "\nfor example: ./init_grid 0.03125 cuda 0.03125 Base 4\n";
         Kokkos::finalize();
         MPI_Finalize();
         return 0;
@@ -161,9 +163,12 @@ int main( int argc, char* argv[] )
     double hp = std::atof( argv[3] );
 
     std::string type_run( argv[4]);
-   
+
+    // correction radius in cells (optional, default 4)
+    int corr_radius = ( argc > 5 ) ? std::atoi( argv[5] ) : 4;
+
     // run the problem.
-    initgrid( cell_size, ppc, halo_size, exec_space, hp, type_run );
+    initgrid( cell_size, ppc, halo_size, exec_space, hp, type_run, corr_radius );
 
 
     Kokkos::finalize();

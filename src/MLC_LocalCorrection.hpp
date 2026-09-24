@@ -19,6 +19,8 @@
 #include <MLC_GridManager.hpp>
 #include <Kokkos_Core.hpp>
 #include <cmath>
+#include <stdexcept>
+#include <string>
 #include <counters.hpp>
 //#include "FFTWLGFConvolution.H"
 namespace MLC
@@ -87,8 +89,10 @@ void update_GridList(const ExecutionSpace& exec_space, const LocalGridType& cgri
         });
 }
 
-template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
- void Deposition( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const NeighborListType& Pi_list,
+// CR is the correction radius. It is a template parameter so vel_loc below can stay a
+// fixed-size stack array of (2*CR+1)^3 points; use Deposition() to pick CR at runtime.
+template <int CR, class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
+ void Deposition_CR( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const NeighborListType& Pi_list,
                   const NeighborListType& Ci_list, const GridManager& gridp, const int num_grid, 
 		  const int extent, const double center, const double h,const double hp,const int corr_radius)
 {
@@ -140,7 +144,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 
 	    //This array stores the velocity approximation for grid point i 
 	    //which will be used to calculate the Laplacian
-            double vel_loc[9][9][9][3]={0};
+            constexpr int SZ = 2*CR + 1;
+            double vel_loc[SZ][SZ][SZ][3]={0};
       
 
 	    //Pi defines the number of particles within the cell of grid point i
@@ -267,6 +272,27 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
 	});
 
 }
+// Runtime dispatch on the correction radius to the matching fixed-size Deposition_CR.
+// Supported radii are 1-6; larger radii make vel_loc too big for per-thread GPU memory.
+template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
+ void Deposition( const ExecutionSpace& exec_space, const ProblemManagerType& pm, const NeighborListType& Pi_list,
+                  const NeighborListType& Ci_list, const GridManager& gridp, const int num_grid,
+                  const int extent, const double center, const double h,const double hp,const int corr_radius)
+{
+   switch( corr_radius )
+   {
+      case 1: Deposition_CR<1>(exec_space, pm, Pi_list, Ci_list, gridp, num_grid, extent, center, h, hp, corr_radius); break;
+      case 2: Deposition_CR<2>(exec_space, pm, Pi_list, Ci_list, gridp, num_grid, extent, center, h, hp, corr_radius); break;
+      case 3: Deposition_CR<3>(exec_space, pm, Pi_list, Ci_list, gridp, num_grid, extent, center, h, hp, corr_radius); break;
+      case 4: Deposition_CR<4>(exec_space, pm, Pi_list, Ci_list, gridp, num_grid, extent, center, h, hp, corr_radius); break;
+      case 5: Deposition_CR<5>(exec_space, pm, Pi_list, Ci_list, gridp, num_grid, extent, center, h, hp, corr_radius); break;
+      case 6: Deposition_CR<6>(exec_space, pm, Pi_list, Ci_list, gridp, num_grid, extent, center, h, hp, corr_radius); break;
+      default:
+         throw std::invalid_argument( "Deposition: correction radius " + std::to_string(corr_radius) +
+                                      " not supported (use 1-6)" );
+   }
+}
+
  template <class ProblemManagerType, class ExecutionSpace, class NeighborListType, class GridManager>
  void Corrections( const ExecutionSpace& exec_space, const ProblemManagerType& pm,
                         const NeighborListType& Ci_list, const NeighborListType& Pi_list, const NeighborListType& Neigh_list,
@@ -291,7 +317,8 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
    Kokkos::deep_copy( velocity_corr, 0.0);
    //Get relevant interpolation quantities 
    MLC_Interp::GridData<3> g( h, center);
-
+   PerfCounters counters("CorrectionsCounters"); 
+   // pm.save_v( "Precorrection_V",1,0);  // debug output; suspected segfault source (Cabana BovWriter)
    Kokkos::parallel_for(
         "Corrections",
         Kokkos::RangePolicy<ExecutionSpace>( exec_space,0,num_grid ),

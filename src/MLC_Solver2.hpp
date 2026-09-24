@@ -45,7 +45,8 @@ class Solver : public SolverBase
             const Cabana::Grid::BlockPartitioner<3>& partitioner,
             const int halo_cell_width, const InitFunc& create_functor,
             const int particles_per_cell, const double cell_size, const double hp,
-            const double center, BoundaryCondition& bc, const std::string& run )
+            const double center, BoundaryCondition& bc, const std::string& run,
+            const int correction_radius )
         : _dt( 0.001 )
         , _time( 0.0 )
         , _step( 0 )
@@ -92,8 +93,8 @@ class Solver : public SolverBase
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
 
-        // Correction radius, vary for different case. Also vary the vel_loc stencil size in MLC_LocalCorrection.hpp.
-        corr_radius = 4.0;
+        // Correction radius (in cells), read in from the command line
+        corr_radius = correction_radius;
 
 
         //Particle Lists
@@ -180,9 +181,9 @@ class Solver : public SolverBase
 
                }
 
-            if ( 0 == _run.compare( "Optimization1" ) ||
-                0 == _run.compare( "optimization1" ) ||
-                0 == _run.compare( "OPTIMIZATION1" ) )
+            if ( 0 == _run.compare( "Optimization" ) ||
+                0 == _run.compare( "optimization" ) ||
+                0 == _run.compare( "OPTIMIZATION" ) )
               {
 
                   Kokkos::Timer timer;
@@ -287,7 +288,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
               const Cabana::Grid::BlockPartitioner<3>& partitioner,
               const int halo_cell_width, const InitFunc& create_functor,
               const int particles_per_cell, const double cell_size, const double hp, const double center,
-	      BoundaryCondition& bc, const std::string& run )
+	      BoundaryCondition& bc, const std::string& run, const int corr_radius )
 {
     if ( 0 == exec_space.compare( "serial" ) ||
          0 == exec_space.compare( "Serial" ) ||
@@ -297,7 +298,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             MLC::Solver<Kokkos::HostSpace, Kokkos::Serial>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run, corr_radius );
 #else
         throw std::runtime_error( "Serial Backend Not Enabled" );
 #endif
@@ -310,7 +311,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             MLC::Solver<Kokkos::HostSpace, Kokkos::OpenMP>>(
             comm, global_bounding_box, global_num_cell,pgrid_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run, corr_radius );
 #else
         throw std::runtime_error( "OpenMP Backend Not Enabled" );
 #endif
@@ -323,7 +324,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<
             MLC::Solver<Kokkos::CudaSpace, Kokkos::Cuda>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run, corr_radius );
 #else
         throw std::runtime_error( "CUDA Backend Not Enabled" );
 #endif
@@ -336,7 +337,7 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
         return std::make_shared<MLC::Solver<Kokkos::Experimental::HIPSpace,
                                                Kokkos::Experimental::HIP>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
-            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run );
+            halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run, corr_radius );
 #else
         throw std::runtime_error( "HIP Backend Not Enabled" );
 #endif
