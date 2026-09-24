@@ -101,21 +101,22 @@ cmake \
 -D CMAKE_INSTALL_PREFIX=install \
 -DMPI_CXX_COMPILER="$(which mpicxx)" \
 ..;
-make
+make Hill
 
 ``
-
-
+The test case given is the Hill's vortex which is a spherical vortex with an analytical solution. The code outputs the L2 particle velocity error, L2 velocity on the grid error, and maximum velocity error as well as the average time over 15 calls for the four performance kernels of Depositions, Convolutions, Corrections, and Interactions. The code can be run as:
+```
+./Hill <grid spacing> <cuda/hip/serial/openmp> <particle spacing> <optimization> <correction radius>
+```
+Correction radius is an optional argument that defaults to 4. The grid spacing is the grid discretization and the particle spacing is the initial spacing of the particles. To have a two particles per direction, run with particle spacing that is half of the grid spacing and so forth. The two options for optimization are: 1. base, 2. optimization. These correspond the base and optimized cases in the paper.  An example run is:
 
 ```
-To build the repo for CUDA:
+./Hill 0.03125 cuda 0.015625 base 4
 ```
-cmake \
--D CMAKE_BUILD_TYPE="Debug" \
--DCMAKE_CXX_COMPILER="${KOKKOS_SRC_DIR}/bin/nvcc_wrapper" \
--DCMAKE_PREFIX_PATH="${CABANA_INSTALL_DIR};${FFTX_HOME}" \
--D CMAKE_INSTALL_PREFIX=install \
--DMPI_CXX_COMPILER="$(which mpicxx)" \
-..;
-make
+To check correctness, the errors for this case are: 
 ```
+Max error component: 0.0960606
+L2 GRID = 0.00562218195142
+L2 P = 0.00438079757796
+```
+
