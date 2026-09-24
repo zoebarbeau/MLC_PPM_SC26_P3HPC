@@ -35,10 +35,27 @@
 #include "fftx.hpp"
 #include "fftxinterface.hpp"
 #include "fftxmdprdftObj.hpp"
-// #include "fftximdprdftObj.hpp"
 #include "fftxmddftObj.hpp"
 #include "fftximddftObj.hpp"
-#include "fftximdprdftObj.hpp"
+
+// The FFTX version on the NVIDIA machines takes the address of each data pointer
+// in the args vector; the version on the AMD machines takes the pointers
+// themselves, with no dummy buffer. The style follows the Kokkos backend (HIP ->
+// by value, otherwise by address); define MLC_FFTX_ARGS_BY_VALUE or
+// MLC_FFTX_ARGS_BY_ADDRESS to override if a machine's FFTX version differs.
+#if !defined(MLC_FFTX_ARGS_BY_VALUE) && !defined(MLC_FFTX_ARGS_BY_ADDRESS)
+#if defined(KOKKOS_ENABLE_HIP)
+#define MLC_FFTX_ARGS_BY_VALUE
+#endif
+#endif
+
+#ifdef MLC_FFTX_ARGS_BY_VALUE
+#define MLC_FFTX_ARG(ptr) (ptr)
+#define MLC_FFTX_DUMMY(ptr) (nullptr)
+#else
+#define MLC_FFTX_ARG(ptr) (&ptr)
+#define MLC_FFTX_DUMMY(ptr) (&ptr)
+#endif
 
 namespace MLC
 {
@@ -169,19 +186,11 @@ double Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType&
   Kokkos::View<Complex*, Kokkos::DefaultExecutionSpace::memory_space> symbol("symbol_view", domaindouble_x * domaindouble_y * domaindouble_z);
   Kokkos::View<double*, Kokkos::DefaultExecutionSpace::memory_space> dummy1("dummy1_view", domaindouble_x * domaindouble_y * domaindouble_z);
 
-/*  std::vector<void*> args1 = [&]() {
-      static auto symbol_data = symbol.data();
-      static auto lgf_data = dev_LGF_cmplx.data();
-      static auto dummy1_data = dummy1.data();
-      return std::vector<void*>{&symbol_data, &lgf_data, &dummy1_data};
-  }();
-
-*/
 
   void* symbol_data = symbol.data();
   void* lgf_data = dev_LGF_cmplx.data();
   void* dummy1_data = dummy1.data();
-  std::vector<void*> args1{&symbol_data, &lgf_data, &dummy1_data};
+  std::vector<void*> args1{MLC_FFTX_ARG(symbol_data), MLC_FFTX_ARG(lgf_data), MLC_FFTX_DUMMY(dummy1_data)};
   // Calculate the symbol i.e. forward DFT of the lattice Green's function
   std::vector<int> sizes{domaindouble_x, domaindouble_y, domaindouble_z};
   MDDFTProblem c2cdft1{args1, sizes, "mddft"};
@@ -225,16 +234,10 @@ double Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType&
     Kokkos::fence();
     double timeparallel_f1dd = timer.seconds();
 
-/*    std::vector<void*> args2 = [&]() {
-       static auto Fdft_data = F_dft.data();
-        static auto F1D_data = F1D_dd_cmplx.data();
-        static auto dummy2_data = dummy2.data();
-        return std::vector<void*>{&Fdft_data, &F1D_data, &dummy2_data};
-    }(); */
     void* Fdft_data = F_dft.data();
     void* F1D_data = F1D_dd_cmplx.data();
     void* dummy2_data = dummy2.data();
-    std::vector<void*> args2{&Fdft_data, &F1D_data, &dummy2_data};
+    std::vector<void*> args2{MLC_FFTX_ARG(Fdft_data), MLC_FFTX_ARG(F1D_data), MLC_FFTX_DUMMY(dummy2_data)};
     // Calculate the forward DFT of the second input F1D_dd_cmplx
     std::vector<int> sizes2{domaindouble_x, domaindouble_y, domaindouble_z};
     MDDFTProblem c2cdft2{args2, sizes2, "mddft"};
@@ -261,17 +264,11 @@ double Conv_fftx_c2c(const ExecutionSpace& exec_space, const ProblemManagerType&
     double timeptwise = timer.seconds();
 
     // Calculate the inverse dft to compute the final convolution value
-/*  std::vector<void*> args3 = [&]() {
-        static auto out_data = out_idft.data();
-        static auto pwise_data = pointwise_mul.data();
-        static auto dummy3_data = dummy3.data();
-        return std::vector<void*>{&out_data, &pwise_data, &dummy3_data};
-    }(); */
 
     void* out_data = out_idft.data();
     void* pwise_data = pointwise_mul.data();
     void* dummy3_data = dummy3.data();
-    std::vector<void*> args3{&out_data, &pwise_data, &dummy3_data};
+    std::vector<void*> args3{MLC_FFTX_ARG(out_data), MLC_FFTX_ARG(pwise_data), MLC_FFTX_DUMMY(dummy3_data)};
     std::vector<int> sizes3{domaindouble_x, domaindouble_y, domaindouble_z};
     IMDDFTProblem c2cidft{args3, sizes3, "imddft"};
     c2cidft.transform();

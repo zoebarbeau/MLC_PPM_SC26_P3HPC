@@ -132,7 +132,7 @@ int main( int argc, char* argv[] )
     // check inputs and write usage
     if ( argc < 5 )
     {
-        std::cerr << "Usage: ./init_grid cell_size "
+        std::cerr << "Usage: ./Hill cell_size "
                      "exec_space particle_cell_size type_of_run [corr_radius]\n";
         std::cerr << "\nwhere cell_size       edge length of a computational "
                      "cell (domain is unit cube)\n";

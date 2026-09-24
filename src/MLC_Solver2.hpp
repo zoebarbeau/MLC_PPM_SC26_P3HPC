@@ -334,8 +334,8 @@ createSolver( const std::string& exec_space, MPI_Comm comm,
               0 == exec_space.compare( "HIP" ) )
     {
 #ifdef KOKKOS_ENABLE_HIP
-        return std::make_shared<MLC::Solver<Kokkos::Experimental::HIPSpace,
-                                               Kokkos::Experimental::HIP>>(
+        return std::make_shared<MLC::Solver<Kokkos::HIPSpace,
+                                               Kokkos::HIP>>(
             comm, global_bounding_box, global_num_cell, pgrid_num_cell, periodic, partitioner,
             halo_cell_width, create_functor, particles_per_cell, cell_size, hp, center, bc, run, corr_radius );
 #else
