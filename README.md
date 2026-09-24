@@ -103,7 +103,7 @@ cmake \
 ..;
 make Hill
 
-``
+```
 The test case given is the Hill's vortex which is a spherical vortex with an analytical solution. The code outputs the L2 particle velocity error, L2 velocity on the grid error, and maximum velocity error as well as the average time over 15 calls for the four performance kernels of Depositions, Convolutions, Corrections, and Interactions. The code can be run as:
 ```
 ./Hill <grid spacing> <cuda/hip/serial/openmp> <particle spacing> <optimization> <correction radius>
