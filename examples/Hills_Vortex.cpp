@@ -8,12 +8,6 @@
 #include <Kokkos_Core.hpp>
 
 #include <complex>
-//#include "fftx3.hpp"
-// #include "interface.hpp"
-// #include "/home/h82/Documents/Bluestone/SPIRAL/FFTX/fftx/examples/rconv/rconvObj.hpp"
-// #include "rconvObj.hpp"
-//#include "mddftObj.hpp"
-
 #include <mpi.h>
 #include <array>
 #include <cmath>
