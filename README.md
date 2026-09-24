@@ -87,7 +87,7 @@ cmake \
 -DCabana_ENABLE_TESTING=OFF \
 ..;
 Make install
-
+```
 To build the MLC repo on for CUDA, specify the nvcc wrapper for CXX. Similarly, specify hipcc for HIP.
 ```
 git clone https://github.com/zoebarbeau/MLC_PPM_SC26_P3HPC.git
