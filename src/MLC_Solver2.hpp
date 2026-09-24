@@ -45,7 +45,7 @@ class Solver : public SolverBase
             const Cabana::Grid::BlockPartitioner<3>& partitioner,
             const int halo_cell_width, const InitFunc& create_functor,
             const int particles_per_cell, const double cell_size, const double hp,
-            const double center, BoundaryCondition& bc )
+            const double center, BoundaryCondition& bc, const std::string& run )
         : _dt( 0.001 )
         , _time( 0.0 )
         , _step( 0 )
@@ -92,7 +92,7 @@ class Solver : public SolverBase
 
 	auto positions = _pm->get( Location::Particle(), Field::Position() );
 
-        // Correction radius, vary for different case. Also vary line 143 in MLC_LocalCorrections.cpp double: vel_loc[9][9][9][3]={0};
+        // Correction radius, vary for different case. Also vary the vel_loc stencil size in MLC_LocalCorrection.hpp.
         corr_radius = 4.0;
 
 
@@ -153,9 +153,9 @@ class Solver : public SolverBase
          double calls = 15;
          for(int i = 0; i < 15; i++){
 
-           if ( 0 == run.compare( "Base" ) ||
-                0 == run.compare( "base" ) ||
-                0 == run.compare( "BASE" ) )
+           if ( 0 == _run.compare( "Base" ) ||
+                0 == _run.compare( "base" ) ||
+                0 == _run.compare( "BASE" ) )
               {
    
                   Kokkos::Timer timer;
@@ -180,9 +180,9 @@ class Solver : public SolverBase
 
                }
 
-            if ( 0 == run.compare( "Optimization1" ) ||
-                0 == run.compare( "optimization1" ) ||
-                0 == run.compare( "OPTIMIZATION1" ) )
+            if ( 0 == _run.compare( "Optimization1" ) ||
+                0 == _run.compare( "optimization1" ) ||
+                0 == _run.compare( "OPTIMIZATION1" ) )
               {
 
                   Kokkos::Timer timer;
@@ -224,7 +224,6 @@ class Solver : public SolverBase
      
 
 
-    }
 
 
     void outputParticles()
@@ -260,7 +259,7 @@ class Solver : public SolverBase
     double _time;
     int _step, corr_radius;
     BoundaryCondition _bc;
-    std::string& run;
+    std::string _run;
     int _halo_min;
     std::shared_ptr<Mesh<MemorySpace>> _mesh, _pmesh;
     std::shared_ptr<ProblemManager<MemorySpace>> _pm;

@@ -321,7 +321,7 @@ template <class ProblemManagerType, class ExecutionSpace, class NeighborListType
              auto size   = Pi_list.binSize(ii,jj,kk);
 
              // Range of Local Correction
-             double vel_loc[9][9][9][3]={0};
+             double vel_loc[3][3][3][3]={0};
 
 	     //The correction is local to a grid point i so the grid of corrected velocity is reset to 0 for each point
 	     //This array of corrected velocity is the far field contribution to velocity and is interpolated to the particles
